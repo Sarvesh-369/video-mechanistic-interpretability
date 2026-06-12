@@ -129,8 +129,8 @@ def main():
     parser.add_argument("--layer-idx", type=int, default=-2, help="Layer index to probe")
     parser.add_argument("--output-dir", type=str, default="results/exp3", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
-    parser.add_argument("--max-train-videos", type=int, default=50, help="Maximum number of training videos to sample")
-    parser.add_argument("--c", type=float, default=0.1, help="Inverse of regularization strength for Logistic Regression")
+    parser.add_argument("--max-train-videos", type=int, default=100, help="Maximum number of training videos to sample")
+    parser.add_argument("--regularization-c", type=float, default=0.1, help="Inverse of regularization strength for Logistic Regression")
     args = parser.parse_args()
     
     if (args.video_path is None) == (args.test_dir is None):
@@ -163,8 +163,8 @@ def main():
     X_train = np.concatenate(X_train_list, axis=0)
     y_train = np.concatenate(y_train_list, axis=0)
     
-    print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.c})...")
-    probe = LogisticRegression(max_iter=1000, C=args.c)
+    print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.regularization_c})...")
+    probe = LogisticRegression(max_iter=1000, C=args.regularization_c)
     probe.fit(X_train, y_train)
     
     train_acc = accuracy_score(y_train, probe.predict(X_train))
