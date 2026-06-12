@@ -55,7 +55,7 @@ def load_model_and_processor(model_id=DEFAULT_MODEL_ID, device="cuda", flash_att
     return model, processor
 
 
-def prepare_video_inputs(video_path, question_text, processor, device="cuda", fps=None):
+def prepare_video_inputs(video_path, question_text, processor, device="cuda", fps=2.0):
     """
     Prepares Hugging Face model inputs for a video and question.
     
@@ -64,7 +64,7 @@ def prepare_video_inputs(video_path, question_text, processor, device="cuda", fp
         question_text (str): prompt/query for the model.
         processor: HF AutoProcessor instance.
         device (str): target device.
-        fps (float/int): optional override for frame sampling rate.
+        fps (float/int): override for frame sampling rate (defaults to 2.0).
     """
     # Check for a functional video reader backend
     try:
