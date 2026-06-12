@@ -1,0 +1,164 @@
+import os
+import argparse
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from src.utils.model_helpers import (
+    load_model_and_processor, 
+    prepare_video_inputs, 
+    find_video_files, 
+    get_associated_files, 
+    extract_representation_trajectory
+)
+
+def compute_trajectory_metrics(trajectory):
+    """
+    Computes consecutive frame cosine similarities and trajectory drift.
+    """
+    T, hidden_dim = trajectory.shape
+    
+    # Normalize features
+    norms = np.linalg.norm(trajectory, axis=1, keepdims=True)
+    norm_trajectory = trajectory / (norms + 1e-9)
+    
+    # Consecutive cosine similarity
+    consecutive_sims = []
+    for t in range(T - 1):
+        sim = np.dot(norm_trajectory[t], norm_trajectory[t+1])
+        consecutive_sims.append(float(sim))
+        
+    # Similarity to initial state
+    init_sims = []
+    for t in range(T):
+        sim = np.dot(norm_trajectory[t], norm_trajectory[0])
+        init_sims.append(float(sim))
+        
+    # Apply PCA to project features to 2D trajectory space
+    # (Must have at least 2 steps in T for PCA)
+    if T >= 2:
+        pca = PCA(n_components=2)
+        trajectory_2d = pca.fit_transform(trajectory)
+        explained_variance = pca.explained_variance_ratio_.tolist()
+    else:
+        trajectory_2d = np.zeros((T, 2))
+        explained_variance = [0.0, 0.0]
+        
+    return {
+        "consecutive_sims": consecutive_sims,
+        "init_sims": init_sims,
+        "trajectory_2d": trajectory_2d.tolist(),
+        "explained_variance": explained_variance
+    }
+
+def plot_representation_analysis(metrics, output_image_path):
+    """
+    Generates plots of cosine similarity over time and the PCA trajectory path.
+    """
+    consecutive_sims = metrics["consecutive_sims"]
+    init_sims = metrics["init_sims"]
+    traj_2d = np.array(metrics["trajectory_2d"])
+    T = len(init_sims)
+    
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Plot 1: Cosine Similarity metrics
+    axes[0].plot(range(T - 1), consecutive_sims, label='Consecutive Sim S(t, t+1)', color='purple', marker='o')
+    axes[0].plot(range(T), init_sims, label='Initial Sim S(t, 0)', color='teal', linestyle='--')
+    axes[0].set_xlabel('Temporal Patch Index (t)')
+    axes[0].set_ylabel('Cosine Similarity')
+    axes[0].set_title('Representational Similarity Over Time')
+    axes[0].set_ylim([0.0, 1.05])
+    axes[0].legend()
+    axes[0].grid(True)
+    
+    # Plot 2: 2D PCA state space trajectory
+    sc = axes[1].scatter(traj_2d[:, 0], traj_2d[:, 1], c=range(T), cmap='plasma', edgecolor='k', s=50, zorder=3)
+    axes[1].plot(traj_2d[:, 0], traj_2d[:, 1], color='gray', linestyle='-', alpha=0.5, zorder=2)
+    
+    # Annotate start and end points
+    axes[1].text(traj_2d[0, 0], traj_2d[0, 1], ' Start', color='green', fontweight='bold')
+    axes[1].text(traj_2d[-1, 0], traj_2d[-1, 1], ' End', color='red', fontweight='bold')
+    
+    axes[1].set_xlabel('PCA Component 1')
+    axes[1].set_ylabel('PCA Component 2')
+    axes[1].set_title('2D PCA Representation Space Trajectory')
+    fig.colorbar(sc, ax=axes[1], label='Time Step (t)')
+    axes[1].grid(True)
+    
+    plt.tight_layout()
+    plt.savefig(output_image_path, dpi=300)
+    plt.close()
+
+def main():
+    parser = argparse.ArgumentParser(description="Run Experiment 2: Representation Similarity Analysis")
+    parser.add_argument("--video-path", type=str, default=None, help="Path to a single video file")
+    parser.add_argument("--video-dir", type=str, default=None, help="Path to a directory containing video dataset")
+    parser.add_argument("--model-id", type=str, default="Qwen/Qwen3-VL-8B-Instruct", help="Hugging Face model ID")
+    parser.add_argument("--layer-idx", type=int, default=-2, help="Layer index to extract hidden states")
+    parser.add_argument("--output-dir", type=str, default="results/exp2", help="Output directory")
+    parser.add_argument("--device", type=str, default="cuda", help="Target device")
+    args = parser.parse_args()
+    
+    if (args.video_path is None) == (args.video_dir is None):
+        parser.error("Exactly one of --video-path or --video-dir must be provided.")
+        
+    os.makedirs(args.output_dir, exist_ok=True)
+    
+    # Load model and processor
+    model, processor = load_model_and_processor(args.model_id, device=args.device)
+    
+    # Collect video instances
+    instances = []
+    if args.video_path:
+        instances.append(get_associated_files(args.video_path))
+        print(f"Targeting single video: {args.video_path}")
+    else:
+        instances = find_video_files(args.video_dir)
+        print(f"Targeting cohort directory: {args.video_dir} (Found {len(instances)} videos)")
+        instances = instances[:10]
+        
+    all_metrics = []
+    
+    for idx, inst in enumerate(instances):
+        video_path = inst["video_path"]
+        q_path = inst["question_path"]
+        metadata = inst["metadata"]
+        
+        print(f"\nProcessing [{idx+1}/{len(instances)}]: {os.path.basename(video_path)}")
+        
+        if not q_path:
+            question_text = "How many times did the object flash? Show your reasoning and put the final answer in \\boxed{}"
+            print(f"  Warning: Question file not found. Using default question: '{question_text}'")
+        else:
+            with open(q_path, "r") as f:
+                question_text = f.read().strip()
+                
+        inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
+        
+        try:
+            # Extract representations
+            trajectory = extract_representation_trajectory(model, inputs, processor, layer_idx=args.layer_idx)
+            
+            # Compute similarities & PCA coordinates
+            metrics = compute_trajectory_metrics(trajectory)
+            metrics["metadata"] = metadata
+            metrics["video_name"] = os.path.basename(video_path)
+            
+            # Save visual plots for each video
+            out_img = os.path.join(args.output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_repr.png")
+            plot_representation_analysis(metrics, out_img)
+            
+            all_metrics.append(metrics)
+        except Exception as e:
+            print(f"  Error processing {video_path}: {e}")
+            
+    # Save results summary to JSON
+    out_json = os.path.join(args.output_dir, "representation_similarity_summary.json")
+    with open(out_json, "w") as f:
+        json.dump(all_metrics, f, indent=2)
+        
+    print(f"\nFinished Experiment 2! Results saved to {out_json}")
+
+if __name__ == "__main__":
+    main()

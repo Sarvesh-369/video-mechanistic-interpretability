@@ -1,0 +1,47 @@
+# Git Ignore File
+
+# Video and data folders
+videos/
+*.mp4
+*.avi
+*.mkv
+*.webm
+
+# PDF files (papers, etc.)
+*.pdf
+
+# Model codebases / large models
+Qwen3-VL/
+
+# Python caching and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration and environment files
+.env
+.venv
+venv/
+ENV/
+env/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Output results and figures (if any)
+results/
+outputs/
+*.png
+*.jpg
+*.jpeg
+*.svg
