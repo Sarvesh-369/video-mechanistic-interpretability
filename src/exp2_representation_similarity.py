@@ -100,75 +100,90 @@ def main():
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     args = parser.parse_args()
     
-    if (args.video_path is None) == (args.video_dir is None):
-        parser.error("Exactly one of --video-path or --video-dir must be provided.")
+    # Load model and processor once
+    model, processor = load_model_and_processor(args.model_id, device=args.device)
+    
+    # Resolve cohorts to process
+    cohorts = []
+    if args.video_path:
+        cohorts.append((args.video_path, True))
+    elif args.video_dir:
+        cohorts.append((args.video_dir, False))
+    else:
+        # Default to all 3 domains
+        for d in ["videos/temporal/blinking", "videos/temporal/bounce_ball", "videos/temporal/state_machine"]:
+            if os.path.exists(d):
+                cohorts.append((d, False))
+                
+    if not cohorts:
+        print("Error: No target video, video-dir, or default temporal video domains found.")
+        return
         
-    # Resolve domain-specific output directory
-    domain_name = "blinking"
-    target_path = args.video_path or args.video_dir
-    if target_path:
+    for target_path, is_single_video in cohorts:
+        # Resolve domain-specific output directory
+        domain_name = "blinking"
         if "bounce" in target_path.lower():
             domain_name = "bounce_ball"
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
-    output_dir = os.path.join(args.output_dir, domain_name)
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Load model and processor
-    model, processor = load_model_and_processor(args.model_id, device=args.device)
-    
-    # Collect video instances
-    instances = []
-    if args.video_path:
-        instances.append(get_associated_files(args.video_path))
-        print(f"Targeting single video: {args.video_path}")
-    else:
-        instances = find_video_files(args.video_dir)
-        print(f"Targeting cohort directory: {args.video_dir} (Found {len(instances)} videos)")
-        instances = instances[:10]
+        output_dir = os.path.join(args.output_dir, domain_name)
+        os.makedirs(output_dir, exist_ok=True)
         
-    all_metrics = []
-    
-    for idx, inst in enumerate(instances):
-        video_path = inst["video_path"]
-        q_path = inst["question_path"]
-        metadata = inst["metadata"]
-        
-        print(f"\nProcessing [{idx+1}/{len(instances)}]: {os.path.basename(video_path)}")
-        
-        if not q_path:
-            question_text = "How many times did the object flash? Show your reasoning and put the final answer in \\boxed{}"
-            print(f"  Warning: Question file not found. Using default question: '{question_text}'")
+        # Collect video instances
+        instances = []
+        if is_single_video:
+            instances.append(get_associated_files(target_path))
+            print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
         else:
-            with open(q_path, "r") as f:
-                question_text = f.read().strip()
+            instances = find_video_files(target_path)
+            print(f"\nTargeting cohort directory for domain '{domain_name}': {target_path} (Found {len(instances)} videos)")
+            instances = instances[:10]
+            
+        all_metrics = []
+        
+        for idx, inst in enumerate(instances):
+            video_path = inst["video_path"]
+            q_path = inst["question_path"]
+            metadata = inst["metadata"]
+            
+            print(f"  Processing [{idx+1}/{len(instances)}]: {os.path.basename(video_path)}")
+            
+            if not q_path:
+                question_text = "How many times did the object flash? Show your reasoning and put the final answer in \\boxed{}"
+                print(f"    Warning: Question file not found. Using default question: '{question_text}'")
+            else:
+                with open(q_path, "r") as f:
+                    question_text = f.read().strip()
+                    
+            inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
+            
+            try:
+                # Extract representations
+                trajectory = extract_representation_trajectory(model, inputs, processor, layer_idx=args.layer_idx)
                 
-        inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
-        
-        try:
-            # Extract representations
-            trajectory = extract_representation_trajectory(model, inputs, processor, layer_idx=args.layer_idx)
+                # Compute similarities & PCA coordinates
+                metrics = compute_trajectory_metrics(trajectory)
+                metrics["metadata"] = metadata
+                metrics["video_name"] = os.path.basename(video_path)
+                
+                # Save visual plots for each video
+                out_img = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_repr.png")
+                plot_representation_analysis(metrics, out_img)
+                
+                all_metrics.append(metrics)
+            except Exception as e:
+                print(f"    Error processing {video_path}: {e}")
+                
+        if not all_metrics:
+            continue
             
-            # Compute similarities & PCA coordinates
-            metrics = compute_trajectory_metrics(trajectory)
-            metrics["metadata"] = metadata
-            metrics["video_name"] = os.path.basename(video_path)
+        # Save results summary to JSON
+        out_json = os.path.join(output_dir, "representation_similarity_summary.json")
+        with open(out_json, "w") as f:
+            json.dump(all_metrics, f, indent=2)
             
-            # Save visual plots for each video
-            out_img = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_repr.png")
-            plot_representation_analysis(metrics, out_img)
-            
-            all_metrics.append(metrics)
-        except Exception as e:
-            print(f"  Error processing {video_path}: {e}")
-            
-    # Save results summary to JSON
-    out_json = os.path.join(output_dir, "representation_similarity_summary.json")
-    with open(out_json, "w") as f:
-        json.dump(all_metrics, f, indent=2)
-        
-    print(f"\nFinished Experiment 2! Results saved to {out_json}")
+        print(f"Finished representation similarity analysis for {domain_name}! Summary saved to {out_json}")
 
 if __name__ == "__main__":
     main()

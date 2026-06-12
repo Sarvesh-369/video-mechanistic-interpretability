@@ -163,7 +163,7 @@ def main():
     import random
     
     parser = argparse.ArgumentParser(description="Run Experiment 3: Linear Probing for Perceptual State Preservation")
-    parser.add_argument("--train-dir", type=str, required=True, help="Path to the training videos task directory (e.g. videos/temporal/blinking)")
+    parser.add_argument("--train-dir", type=str, default=None, help="Path to the training videos task directory (e.g. videos/temporal/blinking)")
     parser.add_argument("--video-path", type=str, default=None, help="Path to a single test video file")
     parser.add_argument("--test-dir", type=str, default=None, help="Path to a directory containing test videos")
     parser.add_argument("--model-id", type=str, default="Qwen/Qwen3-VL-8B-Instruct", help="Hugging Face model ID")
@@ -174,132 +174,149 @@ def main():
     parser.add_argument("--regularization-c", type=float, default=0.1, help="Inverse of regularization strength for Logistic Regression")
     args = parser.parse_args()
     
-    if (args.video_path is None) == (args.test_dir is None):
-        parser.error("Exactly one of --video-path or --test-dir must be provided for evaluation.")
-        
-    # Resolve domain-specific output directory
-    domain_name = "blinking"
-    target_path = args.train_dir or args.test_dir or args.video_path
-    if target_path:
-        if "bounce" in target_path.lower():
-            domain_name = "bounce_ball"
-        elif "state" in target_path.lower() or "transition" in target_path.lower():
-            domain_name = "state_machine"
-            
-    output_dir = os.path.join(args.output_dir, domain_name)
-    os.makedirs(output_dir, exist_ok=True)
-    
-    if domain_name == "bounce_ball":
-        target_names = ["Wall A (Negative)", "Wall B (Positive)"]
-    elif domain_name == "state_machine":
-        target_names = ["Cool (GREEN/BLUE)", "Warm (RED/YELLOW)"]
-    else:
-        target_names = ["OFF", "ON"]
-    
-    # Load model and processor
+    # Load model and processor once
     model, processor = load_model_and_processor(args.model_id, device=args.device)
     
-    # 1. Collect training data and train the probe
-    print("\n--- 1. Collecting Probing Training Data (Event Count <= 3) ---")
-    train_instances = find_video_files(args.train_dir)
-    easy_train_instances = [inst for inst in train_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3]
-    
-    # Shuffle deterministically to get a diverse mix of event counts (c0, c1, c2, c3)
-    # instead of just taking the first alphabetically sorted ones (which are all c0)
-    shuffled_train = list(easy_train_instances)
-    random.Random(42).shuffle(shuffled_train)
-    easy_train_instances = shuffled_train[:args.max_train_videos]
-    
-    X_train_list, y_train_list, _, _ = collect_features_and_labels(
-        model, processor, easy_train_instances, args.layer_idx, args.device
-    )
-    
-    if not X_train_list:
-        print("Error: No training representations collected.")
-        return
-        
-    X_train = np.concatenate(X_train_list, axis=0)
-    y_train = np.concatenate(y_train_list, axis=0)
-    
-    print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.regularization_c})...")
-    probe = LogisticRegression(max_iter=1000, C=args.regularization_c)
-    probe.fit(X_train, y_train)
-    
-    train_acc = accuracy_score(y_train, probe.predict(X_train))
-    print(f"Probe Train Accuracy: {train_acc:.4f}")
-    
-    # Save the trained linear probe model to be used later
-    probe_path = os.path.join(output_dir, "linear_probe_model.pkl")
-    with open(probe_path, "wb") as f:
-        pickle.dump(probe, f)
-    print(f"Saved trained linear probe model to {probe_path}")
-    
-    # 2. Collect evaluation data
-    print("\n--- 2. Collecting Evaluation Data ---")
-    eval_instances = []
+    # Resolve cohorts of train/eval paths
+    cohorts = []
     if args.video_path:
-        eval_instances.append(get_associated_files(args.video_path))
-        print(f"Targeting single test video: {args.video_path}")
+        if not args.train_dir:
+            parser.error("--train-dir must be specified when using --video-path")
+        cohorts.append((args.train_dir, None, args.video_path))
+    elif args.test_dir:
+        if not args.train_dir:
+            parser.error("--train-dir must be specified when using --test-dir")
+        cohorts.append((args.train_dir, args.test_dir, None))
     else:
-        # Find test instances with event count >= 5
-        test_instances = find_video_files(args.test_dir)
-        hard_test_instances = [inst for inst in test_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5]
-        
-        # Shuffle deterministically to get a diverse mix of test instances
-        shuffled_test = list(hard_test_instances)
-        random.Random(42).shuffle(shuffled_test)
-        eval_instances = shuffled_test[:15]
-        print(f"Targeting test directory: {args.test_dir} (Selected {len(eval_instances)} diverse hard instances)")
-        
-    X_eval_list, y_eval_list, eval_meta, eval_names = collect_features_and_labels(
-        model, processor, eval_instances, args.layer_idx, args.device
-    )
-    
-    if not X_eval_list:
-        print("Error: No evaluation representations collected.")
+        # Default to all 3 domains
+        for d in ["videos/temporal/blinking", "videos/temporal/bounce_ball", "videos/temporal/state_machine"]:
+            if os.path.exists(d):
+                cohorts.append((d, d, None))
+                
+    if not cohorts:
+        print("Error: No training and evaluation configurations resolved.")
         return
         
-    # Evaluate probe
-    X_eval = np.concatenate(X_eval_list, axis=0)
-    y_eval = np.concatenate(y_eval_list, axis=0)
-    y_eval_pred = probe.predict(X_eval)
-    eval_acc = accuracy_score(y_eval, y_eval_pred)
-    
-    print("\n--- Probing Evaluation Results ---")
-    print(f"Probing Accuracy: {eval_acc:.4f}")
-    
-    # Compute classification report string and dict (with zero_division=0 to prevent terminal warnings)
-    report_str = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, zero_division=0)
-    report_dict = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, output_dict=True, zero_division=0)
-    print(report_str)
-    
-    # Save individual prediction plots
-    print("\nSaving predicted state trajectory plots...")
-    for i in range(min(3, len(X_eval_list))):
-        y_true_v = y_eval_list[i]
-        X_v = X_eval_list[i]
-        y_pred_v = probe.predict(X_v)
+    for train_dir, test_dir, video_path in cohorts:
+        # Resolve domain name
+        domain_name = "blinking"
+        target_path = train_dir or video_path
+        if target_path:
+            if "bounce" in target_path.lower():
+                domain_name = "bounce_ball"
+            elif "state" in target_path.lower() or "transition" in target_path.lower():
+                domain_name = "state_machine"
+                
+        output_dir = os.path.join(args.output_dir, domain_name)
+        os.makedirs(output_dir, exist_ok=True)
         
-        v_name = eval_names[i]
-        out_img = os.path.join(output_dir, f"{os.path.splitext(v_name)[0]}_probe.png")
+        if domain_name == "bounce_ball":
+            target_names = ["Wall A (Negative)", "Wall B (Positive)"]
+        elif domain_name == "state_machine":
+            target_names = ["Cool (GREEN/BLUE)", "Warm (RED/YELLOW)"]
+        else:
+            target_names = ["OFF", "ON"]
+            
+        # 1. Collect training data and train the probe
+        print(f"\n--- 1. Collecting Probing Training Data for '{domain_name}' (Event Count <= 3) ---")
+        train_instances = find_video_files(train_dir)
+        easy_train_instances = [inst for inst in train_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3]
         
-        plot_probe_predictions(
-            y_true_v, y_pred_v, out_img,
-            f"Probing Predictions for {v_name} (GT Events={eval_meta[i]['count']})"
+        # Shuffle deterministically to get a diverse mix of event counts
+        shuffled_train = list(easy_train_instances)
+        random.Random(42).shuffle(shuffled_train)
+        easy_train_instances = shuffled_train[:args.max_train_videos]
+        
+        X_train_list, y_train_list, _, _ = collect_features_and_labels(
+            model, processor, easy_train_instances, args.layer_idx, args.device
         )
         
-    # Save quantitative report
-    report = {
-        "train_accuracy": float(train_acc),
-        "probing_accuracy": float(eval_acc),
-        "model_id": args.model_id,
-        "layer_idx": args.layer_idx,
-        "classification_report": report_dict
-    }
-    out_json = os.path.join(output_dir, "probing_evaluation_results.json")
-    with open(out_json, "w") as f:
-        json.dump(report, f, indent=2)
-    print(f"\nFinished Experiment 3! Summary saved to {out_json}")
+        if not X_train_list:
+            print(f"Error: No training representations collected for {domain_name}.")
+            continue
+            
+        X_train = np.concatenate(X_train_list, axis=0)
+        y_train = np.concatenate(y_train_list, axis=0)
+        
+        print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.regularization_c})...")
+        probe = LogisticRegression(max_iter=1000, C=args.regularization_c)
+        probe.fit(X_train, y_train)
+        
+        train_acc = accuracy_score(y_train, probe.predict(X_train))
+        print(f"Probe Train Accuracy: {train_acc:.4f}")
+        
+        # Save the trained linear probe model to be used later
+        probe_path = os.path.join(output_dir, "linear_probe_model.pkl")
+        with open(probe_path, "wb") as f:
+            pickle.dump(probe, f)
+        print(f"Saved trained linear probe model to {probe_path}")
+        
+        # 2. Collect evaluation data
+        print(f"\n--- 2. Collecting Evaluation Data for '{domain_name}' ---")
+        eval_instances = []
+        if video_path:
+            eval_instances.append(get_associated_files(video_path))
+            print(f"Targeting single test video: {video_path}")
+        else:
+            # Find test instances with event count >= 5
+            test_instances = find_video_files(test_dir)
+            hard_test_instances = [inst for inst in test_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5]
+            
+            # Shuffle deterministically to get a diverse mix of test instances
+            shuffled_test = list(hard_test_instances)
+            random.Random(42).shuffle(shuffled_test)
+            eval_instances = shuffled_test[:15]
+            print(f"Targeting test directory: {test_dir} (Selected {len(eval_instances)} diverse hard instances)")
+            
+        X_eval_list, y_eval_list, eval_meta, eval_names = collect_features_and_labels(
+            model, processor, eval_instances, args.layer_idx, args.device
+        )
+        
+        if not X_eval_list:
+            print(f"Error: No evaluation representations collected for {domain_name}.")
+            continue
+            
+        # Evaluate probe
+        X_eval = np.concatenate(X_eval_list, axis=0)
+        y_eval = np.concatenate(y_eval_list, axis=0)
+        y_eval_pred = probe.predict(X_eval)
+        eval_acc = accuracy_score(y_eval, y_eval_pred)
+        
+        print(f"\n--- Probing Evaluation Results for '{domain_name}' ---")
+        print(f"Probing Accuracy: {eval_acc:.4f}")
+        
+        # Compute classification report string and dict (with zero_division=0 to prevent terminal warnings)
+        report_str = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, zero_division=0)
+        report_dict = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, output_dict=True, zero_division=0)
+        print(report_str)
+        
+        # Save individual prediction plots
+        print("\nSaving predicted state trajectory plots...")
+        for i in range(min(3, len(X_eval_list))):
+            y_true_v = y_eval_list[i]
+            X_v = X_eval_list[i]
+            y_pred_v = probe.predict(X_v)
+            
+            v_name = eval_names[i]
+            out_img = os.path.join(output_dir, f"{os.path.splitext(v_name)[0]}_probe.png")
+            
+            plot_probe_predictions(
+                y_true_v, y_pred_v, out_img,
+                f"Probing Predictions for {v_name} (GT Events={eval_meta[i]['count']})"
+            )
+            
+        # Save quantitative report
+        report = {
+            "train_accuracy": float(train_acc),
+            "probing_accuracy": float(eval_acc),
+            "model_id": args.model_id,
+            "layer_idx": args.layer_idx,
+            "classification_report": report_dict
+        }
+        out_json = os.path.join(output_dir, "probing_evaluation_results.json")
+        with open(out_json, "w") as f:
+            json.dump(report, f, indent=2)
+        print(f"Finished Experiment 3 for {domain_name}! Summary saved to {out_json}")
 
 if __name__ == "__main__":
     main()
