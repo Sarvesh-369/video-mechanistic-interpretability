@@ -112,12 +112,12 @@ def main():
             },
             "High_Spatial_Resolution": {
                 "min_pixels": 512 * 512,
-                "max_pixels": 1024 * 1024
+                "max_pixels": 602112
             },
             "High_Temporal_And_Spatial": {
                 "fps": 4.0,
                 "min_pixels": 512 * 512,
-                "max_pixels": 1024 * 1024
+                "max_pixels": 602112
             }
         }
         
