@@ -118,6 +118,8 @@ def plot_probe_predictions(y_true, y_pred, output_image_path, title):
     plt.close()
 
 def main():
+    import random
+    
     parser = argparse.ArgumentParser(description="Run Experiment 3: Linear Probing for Perceptual State Preservation")
     parser.add_argument("--train-dir", type=str, required=True, help="Path to the training videos task directory (e.g. videos/temporal/blinking)")
     parser.add_argument("--video-path", type=str, default=None, help="Path to a single test video file")
@@ -140,7 +142,12 @@ def main():
     print("\n--- 1. Collecting Probing Training Data (Event Count <= 3) ---")
     train_instances = find_video_files(args.train_dir)
     easy_train_instances = [inst for inst in train_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3]
-    easy_train_instances = easy_train_instances[:15] # Limit subset size
+    
+    # Shuffle deterministically to get a diverse mix of event counts (c0, c1, c2, c3)
+    # instead of just taking the first 15 alphabetically sorted ones (which are all c0)
+    shuffled_train = list(easy_train_instances)
+    random.Random(42).shuffle(shuffled_train)
+    easy_train_instances = shuffled_train[:15]
     
     X_train_list, y_train_list, _, _ = collect_features_and_labels(
         model, processor, easy_train_instances, args.layer_idx, args.device
@@ -170,8 +177,12 @@ def main():
         # Find test instances with event count >= 5
         test_instances = find_video_files(args.test_dir)
         hard_test_instances = [inst for inst in test_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5]
-        eval_instances = hard_test_instances[:15]
-        print(f"Targeting test directory: {args.test_dir} (Found {len(eval_instances)} hard instances)")
+        
+        # Shuffle deterministically to get a diverse mix of test instances
+        shuffled_test = list(hard_test_instances)
+        random.Random(42).shuffle(shuffled_test)
+        eval_instances = shuffled_test[:15]
+        print(f"Targeting test directory: {args.test_dir} (Selected {len(eval_instances)} diverse hard instances)")
         
     X_eval_list, y_eval_list, eval_meta, eval_names = collect_features_and_labels(
         model, processor, eval_instances, args.layer_idx, args.device
