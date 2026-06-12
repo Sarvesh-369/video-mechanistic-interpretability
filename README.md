@@ -77,8 +77,8 @@ The experiments in this suite target two primary architectural areas:
 *   **Target Mechanism**: Layer-wise hidden state projection onto vocabulary space.
 *   **Core Question**: At what layer depth does the representation of the count collapse?
 *   **Theoretical Foundation**:
-    For the query token predicting the answer, we project the hidden state $h_L$ at every layer $L \in [0, \text{num\_layers}]$ directly onto the vocabulary:
-    $$\text{logits}_L = \text{lm\_head}(\text{layer\_norm}(h_L))$$
+    For the query token predicting the answer, we project the hidden state $h_L$ at every layer $L \in [0, \text{num-layers}]$ directly onto the vocabulary:
+    $$\text{logits}_L = \text{lm-head}(\text{layer-norm}(h_L))$$
     $$\text{probs}_L = \text{Softmax}(\text{logits}_L)$$
     We track the probability of the correct count token (e.g., "5") vs. incorrect/under-counted tokens (e.g., "4") across the depth of the network.
 *   **Theoretical Interpretation**:
