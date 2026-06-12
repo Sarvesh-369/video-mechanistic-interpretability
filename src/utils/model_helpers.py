@@ -6,7 +6,7 @@ from qwen_vl_utils import process_vision_info
 
 DEFAULT_MODEL_ID = "Qwen/Qwen3-VL-8B-Instruct"
 
-def load_model_and_processor(model_id=DEFAULT_MODEL_ID, device="cuda", flash_attn=True):
+def load_model_and_processor(model_id=DEFAULT_MODEL_ID, device="cuda", flash_attn=True, attn_implementation=None):
     """
     Loads Qwen3-VL model and processor.
     
@@ -14,6 +14,7 @@ def load_model_and_processor(model_id=DEFAULT_MODEL_ID, device="cuda", flash_att
         model_id (str): Hugging Face repository or local path.
         device (str): target PyTorch device ('cuda', 'cpu', etc.)
         flash_attn (bool): whether to use flash_attention_2 if available.
+        attn_implementation (str): target attention implementation ('flash_attention_2', 'sdpa', 'eager').
     """
     print(f"Loading processor for {model_id}...")
     processor = AutoProcessor.from_pretrained(model_id)
@@ -21,16 +22,17 @@ def load_model_and_processor(model_id=DEFAULT_MODEL_ID, device="cuda", flash_att
     print(f"Loading model {model_id} on {device}...")
     torch_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float16
     
-    # Check if flash_attn is installed and available
-    has_flash_attn = False
-    if flash_attn and torch.cuda.is_available():
-        try:
-            import flash_attn
-            has_flash_attn = True
-        except ImportError:
-            print("flash_attn package is not installed. Defaulting to SDPA.")
-            
-    attn_implementation = "flash_attention_2" if has_flash_attn else "sdpa"
+    if attn_implementation is None:
+        # Check if flash_attn is installed and available
+        has_flash_attn = False
+        if flash_attn and torch.cuda.is_available():
+            try:
+                import flash_attn
+                has_flash_attn = True
+            except ImportError:
+                print("flash_attn package is not installed. Defaulting to SDPA.")
+                
+        attn_implementation = "flash_attention_2" if has_flash_attn else "sdpa"
     
     try:
         model = AutoModelForImageTextToText.from_pretrained(

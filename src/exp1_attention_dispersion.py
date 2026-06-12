@@ -145,8 +145,14 @@ def main():
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     args = parser.parse_args()
     
-    # Load model and processor once
-    model, processor = load_model_and_processor(args.model_id, device=args.device)
+    # Load model and processor once.
+    # Note: Experiment 1 needs to extract attention maps (output_attentions=True),
+    # which is not supported by PyTorch's SDPA backend. We force "eager" attention.
+    model, processor = load_model_and_processor(
+        args.model_id, 
+        device=args.device, 
+        attn_implementation="eager"
+    )
     
     # Resolve cohorts to process
     cohorts = []
