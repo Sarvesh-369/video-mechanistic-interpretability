@@ -56,7 +56,7 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
     layer_attentions = []
     
     for layer in range(num_layers):
-        attn_matrix = outputs.attentions[layer][0].cpu().numpy() # shape: (num_heads, seq_len, seq_len)
+        attn_matrix = outputs.attentions[layer][0].float().cpu().numpy() # shape: (num_heads, seq_len, seq_len)
         
         head_entropies = []
         head_attns = []

@@ -41,7 +41,7 @@ def run_logit_lens(model, inputs, processor, correct_token_str, alternative_toke
         with torch.no_grad():
             normed_h = final_norm(h_L.unsqueeze(0))
             logits = lm_head(normed_h)[0]
-            probs = F.softmax(logits, dim=-1).cpu().numpy()
+            probs = F.softmax(logits, dim=-1).float().cpu().numpy()
             
         layer_probs_correct.append(float(probs[correct_id]))
         for token_str, token_id in alt_ids.items():
@@ -187,6 +187,8 @@ def main():
             print(f"Finished Experiment 5 for {domain_name}! Summary saved to {out_json}")
         except Exception as e:
             print(f"  Error running Logit Lens: {e}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     main()
