@@ -52,15 +52,11 @@ def prepare_inputs_with_ablation(video_path, question_text, processor, device, c
 def parse_answer(output_text):
     """
     Parses the numeric count out of the LaTeX boxed format like \boxed{5}.
+    Only parses the boxed value.
     """
     match = re.search(r'\\boxed\{(\d+)\}', output_text)
     if match:
         return int(match.group(1))
-        
-    digits = re.findall(r'\b\d+\b', output_text)
-    if digits:
-        return int(digits[-1])
-        
     return None
 
 def main():
@@ -158,6 +154,10 @@ def main():
             with open(q_path, "r") as f:
                 question_text = f.read().strip()
                 
+            # Enforce that the prompt asks for a boxed final answer
+            if "boxed" not in question_text.lower():
+                question_text += " Show your reasoning step-by-step and put the final numeric count in \\boxed{}."
+                
             with open(solution_path, "r") as f:
                 ground_truth = int(f.read().strip())
                 
@@ -179,7 +179,7 @@ def main():
                 
                 try:
                     with torch.no_grad():
-                        output_ids = model.generate(**inputs, max_new_tokens=256)
+                        output_ids = model.generate(**inputs, max_new_tokens=1024)
                     
                     input_len = inputs["input_ids"].shape[1]
                     response = processor.decode(output_ids[0][input_len:], skip_special_tokens=True)
