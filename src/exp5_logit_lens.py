@@ -92,8 +92,8 @@ def main():
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     args = parser.parse_args()
     
-    if (args.video_path is None) == (args.video_dir is None):
-        parser.error("Exactly one of --video-path or --video-dir must be provided.")
+    if args.video_path is not None and args.video_dir is not None:
+        parser.error("Only one of --video-path or --video-dir can be specified.")
         
     # Import matplotlib here
     global plt
