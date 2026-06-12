@@ -66,6 +66,37 @@ def prepare_video_inputs(video_path, question_text, processor, device="cuda", fp
         device (str): target device.
         fps (float/int): optional override for frame sampling rate.
     """
+    # Check for a functional video reader backend
+    try:
+        import torchvision.io as tv_io
+        has_tv_read = hasattr(tv_io, "read_video")
+    except ImportError:
+        has_tv_read = False
+
+    try:
+        import decord
+        has_decord = True
+    except ImportError:
+        has_decord = False
+
+    if not has_tv_read and not has_decord:
+        raise ImportError(
+            "\n" + "="*80 + "\n"
+            "ERROR: No functional video reader backend found for qwen_vl_utils.\n"
+            "Your torchvision installation was compiled without video reading support (missing FFmpeg/PyAV),\n"
+            "and the 'decord' package is not installed.\n\n"
+            "To resolve this, please install one of the following on your GPU server:\n"
+            "  pip install av\n"
+            "or:\n"
+            "  pip install decord\n"
+            "  (Note: You can force a backend by running: export FORCE_QWENVL_VIDEO_READER=decord)\n" +
+            "="*80 + "\n"
+        )
+    elif not has_tv_read and has_decord:
+        if not os.environ.get("FORCE_QWENVL_VIDEO_READER"):
+            print("torchvision is missing read_video support. Forcing decord backend...")
+            os.environ["FORCE_QWENVL_VIDEO_READER"] = "decord"
+
     content = []
     video_item = {"type": "video", "video": os.path.abspath(video_path)}
     if fps is not None:
