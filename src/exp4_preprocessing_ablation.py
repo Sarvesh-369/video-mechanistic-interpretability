@@ -75,7 +75,17 @@ def main():
     if (args.video_path is None) == (args.video_dir is None):
         parser.error("Exactly one of --video-path or --video-dir must be provided.")
         
-    os.makedirs(args.output_dir, exist_ok=True)
+    # Resolve domain-specific output directory
+    domain_name = "blinking"
+    target_path = args.video_path or args.video_dir
+    if target_path:
+        if "bounce" in target_path.lower():
+            domain_name = "bounce_ball"
+        elif "state" in target_path.lower() or "transition" in target_path.lower():
+            domain_name = "state_machine"
+            
+    output_dir = os.path.join(args.output_dir, domain_name)
+    os.makedirs(output_dir, exist_ok=True)
     
     # Load model and processor
     model, processor = load_model_and_processor(args.model_id, device=args.device)
@@ -196,7 +206,7 @@ def main():
         print(f"Configuration [{name}] Accuracy: {acc:.4f} ({success_count}/{total_valid})")
         
     # Save results to JSON
-    out_json = os.path.join(args.output_dir, "ablation_evaluation_results.json")
+    out_json = os.path.join(output_dir, "ablation_evaluation_results.json")
     with open(out_json, "w") as f:
         json.dump({
             "config_accuracies": {k: v / total_valid for k, v in config_success_counts.items()},

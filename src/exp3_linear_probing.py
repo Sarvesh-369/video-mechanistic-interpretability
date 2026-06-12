@@ -17,29 +17,70 @@ from src.utils.model_helpers import (
 
 def parse_trace_states(trace_path, T, duration):
     """
-    Parses a reasoning trace file to determine the ground-truth state (ON=1, OFF=0) of the object at each temporal step.
+    Parses a reasoning trace file to determine the ground-truth state (1 or 0)
+    of the object/ball/circle at each temporal step.
+    Supports all 3 domains: blinking, bounce_ball, and state_machine.
     """
     with open(trace_path, "r") as f:
-        content = f.read()
+        lines = f.readlines()
         
-    # Find all event lines: "At M:SS.CSs: Object ..."
-    event_lines = re.findall(r'- At (\d+:\d+\.\d+)s: Object ([^\n]+)', content)
-    
     events = []
-    for time_str, desc in event_lines:
-        parts = time_str.split(":")
-        minutes = float(parts[0])
-        seconds = float(parts[1])
-        timestamp = minutes * 60.0 + seconds
-        
-        state = None
-        if "appears" in desc:
-            state = 1 if "(ON state)" in desc else 0
-        elif "turns ON" in desc:
-            state = 1
-        elif "turns OFF" in desc:
-            state = 0
+    
+    # Identify domain from file path or content
+    is_bounce = "bounce" in trace_path.lower()
+    is_state_machine = "state" in trace_path.lower() or "transition" in trace_path.lower()
+    
+    for line in lines:
+        line = line.strip()
+        # Parse timestamp from format like "At M:SS.CSs" or "At S.CSs"
+        # e.g., "- At 0:00.00s: ..." or "At 0:00.83s, ..."
+        time_match = re.search(r'At (\d+:\d+\.\d+|\d+\.\d+)s', line)
+        if not time_match:
+            continue
             
+        time_str = time_match.group(1)
+        if ":" in time_str:
+            parts = time_str.split(":")
+            minutes = float(parts[0])
+            seconds = float(parts[1])
+            timestamp = minutes * 60.0 + seconds
+        else:
+            timestamp = float(time_str)
+            
+        state = None
+        if is_bounce:
+            # Bounce Ball domain: Wall B (Positive) vs Wall A (Negative)
+            if "Wall B" in line or "Positive" in line:
+                state = 1
+            elif "Wall A" in line or "Negative" in line:
+                state = 0
+            elif "appears" in line:
+                # e.g. "Ball appears at x=1.17 (local)"
+                x_match = re.search(r'x=(-?\d+\.?\d*)', line)
+                if x_match:
+                    state = 1 if float(x_match.group(1)) > 0 else 0
+                else:
+                    state = 1
+        elif is_state_machine:
+            # State Machine domain: color mapping
+            # Primary split: warm colors (RED, YELLOW) = 1, cool/others (GREEN, BLUE) = 0
+            for c in ["RED", "YELLOW"]:
+                if c in line:
+                    state = 1
+                    break
+            for c in ["GREEN", "BLUE"]:
+                if c in line:
+                    state = 0
+                    break
+        else:
+            # Blinking domain: ON vs OFF
+            if "appears" in line:
+                state = 1 if "(ON state)" in line else 0
+            elif "turns ON" in line:
+                state = 1
+            elif "turns OFF" in line:
+                state = 0
+                
         if state is not None:
             events.append((timestamp, state))
             
@@ -136,7 +177,24 @@ def main():
     if (args.video_path is None) == (args.test_dir is None):
         parser.error("Exactly one of --video-path or --test-dir must be provided for evaluation.")
         
-    os.makedirs(args.output_dir, exist_ok=True)
+    # Resolve domain-specific output directory
+    domain_name = "blinking"
+    target_path = args.train_dir or args.test_dir or args.video_path
+    if target_path:
+        if "bounce" in target_path.lower():
+            domain_name = "bounce_ball"
+        elif "state" in target_path.lower() or "transition" in target_path.lower():
+            domain_name = "state_machine"
+            
+    output_dir = os.path.join(args.output_dir, domain_name)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    if domain_name == "bounce_ball":
+        target_names = ["Wall A (Negative)", "Wall B (Positive)"]
+    elif domain_name == "state_machine":
+        target_names = ["Cool (GREEN/BLUE)", "Warm (RED/YELLOW)"]
+    else:
+        target_names = ["OFF", "ON"]
     
     # Load model and processor
     model, processor = load_model_and_processor(args.model_id, device=args.device)
@@ -171,7 +229,7 @@ def main():
     print(f"Probe Train Accuracy: {train_acc:.4f}")
     
     # Save the trained linear probe model to be used later
-    probe_path = os.path.join(args.output_dir, "linear_probe_model.pkl")
+    probe_path = os.path.join(output_dir, "linear_probe_model.pkl")
     with open(probe_path, "wb") as f:
         pickle.dump(probe, f)
     print(f"Saved trained linear probe model to {probe_path}")
@@ -211,8 +269,8 @@ def main():
     print(f"Probing Accuracy: {eval_acc:.4f}")
     
     # Compute classification report string and dict (with zero_division=0 to prevent terminal warnings)
-    report_str = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=["OFF", "ON"], zero_division=0)
-    report_dict = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=["OFF", "ON"], output_dict=True, zero_division=0)
+    report_str = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, zero_division=0)
+    report_dict = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, output_dict=True, zero_division=0)
     print(report_str)
     
     # Save individual prediction plots
@@ -223,7 +281,7 @@ def main():
         y_pred_v = probe.predict(X_v)
         
         v_name = eval_names[i]
-        out_img = os.path.join(args.output_dir, f"{os.path.splitext(v_name)[0]}_probe.png")
+        out_img = os.path.join(output_dir, f"{os.path.splitext(v_name)[0]}_probe.png")
         
         plot_probe_predictions(
             y_true_v, y_pred_v, out_img,
@@ -238,7 +296,7 @@ def main():
         "layer_idx": args.layer_idx,
         "classification_report": report_dict
     }
-    out_json = os.path.join(args.output_dir, "probing_evaluation_results.json")
+    out_json = os.path.join(output_dir, "probing_evaluation_results.json")
     with open(out_json, "w") as f:
         json.dump(report, f, indent=2)
     print(f"\nFinished Experiment 3! Summary saved to {out_json}")

@@ -99,7 +99,17 @@ def main():
     global plt
     import matplotlib.pyplot as plt
     
-    os.makedirs(args.output_dir, exist_ok=True)
+    # Resolve domain-specific output directory
+    domain_name = "blinking"
+    target_path = args.video_path or args.video_dir
+    if target_path:
+        if "bounce" in target_path.lower():
+            domain_name = "bounce_ball"
+        elif "state" in target_path.lower() or "transition" in target_path.lower():
+            domain_name = "state_machine"
+            
+    output_dir = os.path.join(args.output_dir, domain_name)
+    os.makedirs(output_dir, exist_ok=True)
     
     # Load model and processor
     model, processor = load_model_and_processor(args.model_id, device=args.device)
@@ -148,14 +158,14 @@ def main():
         results["video_name"] = os.path.basename(video_path)
         
         # Save Logit Lens Plot
-        out_img = os.path.join(args.output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.png")
+        out_img = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.png")
         plot_logit_lens(
             results, out_img, 
             f"Logit Lens Profile for {os.path.basename(video_path)} (GT={ground_truth})"
         )
         
         # Save JSON output
-        out_json = os.path.join(args.output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.json")
+        out_json = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.json")
         with open(out_json, "w") as f:
             json.dump(results, f, indent=2)
         print(f"Finished Experiment 5! Results saved to {out_json}")
