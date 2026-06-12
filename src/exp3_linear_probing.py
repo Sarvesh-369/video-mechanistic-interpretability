@@ -2,6 +2,7 @@ import os
 import argparse
 import re
 import json
+import pickle
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, accuracy_score
@@ -166,6 +167,12 @@ def main():
     
     train_acc = accuracy_score(y_train, probe.predict(X_train))
     print(f"Probe Train Accuracy: {train_acc:.4f}")
+    
+    # Save the trained linear probe model to be used later
+    probe_path = os.path.join(args.output_dir, "linear_probe_model.pkl")
+    with open(probe_path, "wb") as f:
+        pickle.dump(probe, f)
+    print(f"Saved trained linear probe model to {probe_path}")
     
     # 2. Collect evaluation data
     print("\n--- 2. Collecting Evaluation Data ---")
