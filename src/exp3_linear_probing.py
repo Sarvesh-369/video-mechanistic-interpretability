@@ -129,6 +129,8 @@ def main():
     parser.add_argument("--layer-idx", type=int, default=-2, help="Layer index to probe")
     parser.add_argument("--output-dir", type=str, default="results/exp3", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
+    parser.add_argument("--max-train-videos", type=int, default=50, help="Maximum number of training videos to sample")
+    parser.add_argument("--c", type=float, default=0.1, help="Inverse of regularization strength for Logistic Regression")
     args = parser.parse_args()
     
     if (args.video_path is None) == (args.test_dir is None):
@@ -145,10 +147,10 @@ def main():
     easy_train_instances = [inst for inst in train_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3]
     
     # Shuffle deterministically to get a diverse mix of event counts (c0, c1, c2, c3)
-    # instead of just taking the first 15 alphabetically sorted ones (which are all c0)
+    # instead of just taking the first alphabetically sorted ones (which are all c0)
     shuffled_train = list(easy_train_instances)
     random.Random(42).shuffle(shuffled_train)
-    easy_train_instances = shuffled_train[:15]
+    easy_train_instances = shuffled_train[:args.max_train_videos]
     
     X_train_list, y_train_list, _, _ = collect_features_and_labels(
         model, processor, easy_train_instances, args.layer_idx, args.device
@@ -161,8 +163,8 @@ def main():
     X_train = np.concatenate(X_train_list, axis=0)
     y_train = np.concatenate(y_train_list, axis=0)
     
-    print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations...")
-    probe = LogisticRegression(max_iter=1000, C=1.0)
+    print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.c})...")
+    probe = LogisticRegression(max_iter=1000, C=args.c)
     probe.fit(X_train, y_train)
     
     train_acc = accuracy_score(y_train, probe.predict(X_train))
@@ -207,7 +209,11 @@ def main():
     
     print("\n--- Probing Evaluation Results ---")
     print(f"Probing Accuracy: {eval_acc:.4f}")
-    print(classification_report(y_eval, y_eval_pred, target_names=["OFF", "ON"]))
+    
+    # Compute classification report string and dict (with zero_division=0 to prevent terminal warnings)
+    report_str = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=["OFF", "ON"], zero_division=0)
+    report_dict = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=["OFF", "ON"], output_dict=True, zero_division=0)
+    print(report_str)
     
     # Save individual prediction plots
     print("\nSaving predicted state trajectory plots...")
@@ -230,6 +236,7 @@ def main():
         "probing_accuracy": float(eval_acc),
         "model_id": args.model_id,
         "layer_idx": args.layer_idx,
+        "classification_report": report_dict
     }
     out_json = os.path.join(args.output_dir, "probing_evaluation_results.json")
     with open(out_json, "w") as f:
