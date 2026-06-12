@@ -21,14 +21,36 @@ def load_model_and_processor(model_id=DEFAULT_MODEL_ID, device="cuda", flash_att
     print(f"Loading model {model_id} on {device}...")
     torch_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float16
     
-    attn_implementation = "flash_attention_2" if flash_attn and torch.cuda.is_available() else "sdpa"
+    # Check if flash_attn is installed and available
+    has_flash_attn = False
+    if flash_attn and torch.cuda.is_available():
+        try:
+            import flash_attn
+            has_flash_attn = True
+        except ImportError:
+            print("flash_attn package is not installed. Defaulting to SDPA.")
+            
+    attn_implementation = "flash_attention_2" if has_flash_attn else "sdpa"
     
-    model = AutoModelForImageTextToText.from_pretrained(
-        model_id,
-        torch_dtype=torch_dtype,
-        attn_implementation=attn_implementation,
-        device_map=device
-    )
+    try:
+        model = AutoModelForImageTextToText.from_pretrained(
+            model_id,
+            torch_dtype=torch_dtype,
+            attn_implementation=attn_implementation,
+            device_map=device
+        )
+    except (ImportError, ValueError) as e:
+        if attn_implementation == "flash_attention_2":
+            print(f"Failed loading with flash_attention_2 ({e}). Falling back to sdpa...")
+            attn_implementation = "sdpa"
+            model = AutoModelForImageTextToText.from_pretrained(
+                model_id,
+                torch_dtype=torch_dtype,
+                attn_implementation=attn_implementation,
+                device_map=device
+            )
+        else:
+            raise e
     
     return model, processor
 
