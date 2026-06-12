@@ -228,7 +228,7 @@ def extract_representation_trajectory(model, inputs, processor, layer_idx=-1):
         
     input_ids = inputs["input_ids"][0]
     
-    # Locate visual tokens
+    # Locate visual tokens (excluding newlines/special tokens if possible)
     vocab = processor.tokenizer.get_vocab()
     vision_start_id = vocab.get("<|vision_start|>", 151652)
     vision_end_id = vocab.get("<|vision_end|>", 151653)
@@ -250,15 +250,51 @@ def extract_representation_trajectory(model, inputs, processor, layer_idx=-1):
     # outputs.hidden_states is a tuple of length num_layers + 1
     hidden_states = outputs.hidden_states[layer_idx][0] # shape: (seq_len, hidden_dim)
     
-    # Extract visual token representations
-    hidden_vision = hidden_states[start_idx:end_idx] # shape: (T*H*W, hidden_dim)
+    # Try to extract the precise visual placeholder tokens (excluding any structure/newlines)
+    video_pad_id = vocab.get("<|video_pad|>", None)
+    image_pad_id = vocab.get("<|image_pad|>", None)
+    if video_pad_id is None:
+        video_pad_id = getattr(processor, "video_token_id", None)
+    if image_pad_id is None:
+        image_pad_id = getattr(processor, "image_token_id", None)
+        
+    visual_ids = [vid for vid in [video_pad_id, image_pad_id] if vid is not None]
+    visual_mask = torch.zeros_like(input_ids, dtype=torch.bool)
+    for vid in visual_ids:
+        visual_mask = visual_mask | (input_ids == vid)
+        
+    # Restrict mask to the region between the vision start and end tokens
+    in_vision_bounds = torch.zeros_like(input_ids, dtype=torch.bool)
+    in_vision_bounds[start_idx:end_idx] = True
+    visual_mask = visual_mask & in_vision_bounds
     
-    # Reshape to (T, H*W, hidden_dim) and perform spatial mean pooling
-    hidden_dim = hidden_vision.shape[-1]
-    hidden_vision = hidden_vision.view(T, H * W, hidden_dim)
+    visual_positions = visual_mask.nonzero(as_tuple=True)[0]
     
-    # Mean pool over spatial patch dimension
-    temporal_trajectory = torch.mean(hidden_vision, dim=1).cpu().float().numpy() # (T, hidden_dim)
+    # Calculate target grid size (considering temporal_patch_size=2 downsampling and spatial_merge_size=2)
+    T_out = max(1, T // 2)
+    H_out = H // 2
+    W_out = W // 2
+    expected_tokens = T_out * H_out * W_out
     
+    if len(visual_positions) == expected_tokens:
+        hidden_vision = hidden_states[visual_positions] # shape: (expected_tokens, hidden_dim)
+        hidden_vision = hidden_vision.view(T_out, H_out * W_out, -1)
+        temporal_trajectory = torch.mean(hidden_vision, dim=1).cpu().float().numpy() # (T_out, hidden_dim)
+    else:
+        # Fallback to slicing in case of unforeseen token mappings
+        hidden_vision = hidden_states[start_idx:end_idx]
+        num_tokens = hidden_vision.shape[0]
+        # Distribute tokens as evenly as possible across T_out steps
+        step_size = max(1, num_tokens // T_out)
+        trajectories = []
+        for t in range(T_out):
+            start = t * step_size
+            end = (t + 1) * step_size if t < T_out - 1 else num_tokens
+            if start < num_tokens:
+                trajectories.append(torch.mean(hidden_vision[start:end], dim=0))
+            else:
+                trajectories.append(torch.zeros(hidden_states.shape[-1], device=hidden_states.device))
+        temporal_trajectory = torch.stack(trajectories).cpu().float().numpy()
+        
     return temporal_trajectory
 
