@@ -98,9 +98,10 @@ def parse_trace_states(trace_path, T, duration):
                 break
         labels.append(active_state)
         
-    return np.array(labels)
+    last_event_time = events[-1][0] if events else 0.0
+    return np.array(labels), last_event_time
 
-def collect_features_and_labels(model, processor, instances, layer_idx, device):
+def collect_features_and_labels(model, processor, instances, layer_idx, device, crop_active_only=False, crop_buffer=1.0):
     """
     Extracts representations and parses labels for a set of instances.
     """
@@ -128,14 +129,24 @@ def collect_features_and_labels(model, processor, instances, layer_idx, device):
             T = trajectory.shape[0]
             duration = meta["duration"]
             
-            labels = parse_trace_states(trace_path, T, duration)
+            labels, last_event_time = parse_trace_states(trace_path, T, duration)
+            
+            if crop_active_only:
+                crop_limit = max(4.0, last_event_time + crop_buffer)
+                valid_indices = [t for t in range(T) if t * (duration / T) <= crop_limit]
+                if not valid_indices:
+                    valid_indices = [0]
+                trajectory = trajectory[valid_indices]
+                labels = labels[valid_indices]
+                T = len(valid_indices)
             
             X_list.append(trajectory)
             y_list.append(labels)
             metadata_list.append(meta)
             video_names.append(os.path.basename(video_path))
             
-            print(f"  Loaded [{idx+1}/{len(instances)}]: {os.path.basename(video_path)} (T={T})")
+            crop_str = f" (cropped T={T})" if crop_active_only else ""
+            print(f"  Loaded [{idx+1}/{len(instances)}]: {os.path.basename(video_path)}{crop_str}")
         except Exception as e:
             print(f"  Error loading {video_path}: {e}")
             
@@ -172,6 +183,9 @@ def main():
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     parser.add_argument("--max-train-videos", type=int, default=100, help="Maximum number of training videos to sample")
     parser.add_argument("--regularization-c", type=float, default=0.1, help="Inverse of regularization strength for Logistic Regression")
+    parser.add_argument("--no-crop-active", action="store_true", help="Disable temporal cropping of active events (use full video duration)")
+    parser.add_argument("--crop-buffer", type=float, default=1.0, help="Buffer in seconds to append after the last event timestamp when cropping")
+    parser.add_argument("--no-class-balance", action="store_true", help="Disable balanced class weighting in Logistic Regression probe")
     args = parser.parse_args()
     
     # Load model and processor once
@@ -228,7 +242,8 @@ def main():
         easy_train_instances = shuffled_train[:args.max_train_videos]
         
         X_train_list, y_train_list, _, _ = collect_features_and_labels(
-            model, processor, easy_train_instances, args.layer_idx, args.device
+            model, processor, easy_train_instances, args.layer_idx, args.device,
+            crop_active_only=not args.no_crop_active, crop_buffer=args.crop_buffer
         )
         
         if not X_train_list:
@@ -238,8 +253,9 @@ def main():
         X_train = np.concatenate(X_train_list, axis=0)
         y_train = np.concatenate(y_train_list, axis=0)
         
-        print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.regularization_c})...")
-        probe = LogisticRegression(max_iter=1000, C=args.regularization_c)
+        class_weight = None if args.no_class_balance else "balanced"
+        print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.regularization_c}, class_weight={class_weight})...")
+        probe = LogisticRegression(max_iter=1000, C=args.regularization_c, class_weight=class_weight)
         probe.fit(X_train, y_train)
         
         train_acc = accuracy_score(y_train, probe.predict(X_train))
@@ -269,7 +285,8 @@ def main():
             print(f"Targeting test directory: {test_dir} (Selected {len(eval_instances)} diverse hard instances)")
             
         X_eval_list, y_eval_list, eval_meta, eval_names = collect_features_and_labels(
-            model, processor, eval_instances, args.layer_idx, args.device
+            model, processor, eval_instances, args.layer_idx, args.device,
+            crop_active_only=not args.no_crop_active, crop_buffer=args.crop_buffer
         )
         
         if not X_eval_list:
