@@ -124,7 +124,8 @@ def prepare_video_inputs(video_path, question_text, processor, device="cuda", fp
         images=image_inputs,
         videos=video_inputs,
         padding=True,
-        return_tensors="pt"
+        return_tensors="pt",
+        do_sample_frames=False
     )
     
     # Move tensor inputs to correct device

@@ -42,7 +42,8 @@ def prepare_inputs_with_ablation(video_path, question_text, processor, device, c
         images=image_inputs,
         videos=video_inputs,
         padding=True,
-        return_tensors="pt"
+        return_tensors="pt",
+        do_sample_frames=False
     )
     
     inputs = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in inputs.items()}
