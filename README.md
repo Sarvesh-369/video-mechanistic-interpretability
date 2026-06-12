@@ -89,7 +89,7 @@ The experiments in this suite target two primary architectural areas:
 
 ## Instructions for Running on the Server
 
-All scripts can be run in either **Single-Video Mode** (for case study visualizations) or **Directory Cohort Mode** (for average statistical profiling). Launch them via the root `run_experiments.py` wrapper.
+All scripts can be run in **Multi-Domain Mode** (defaulting to run on all 3 domains sequentially), **Directory Cohort Mode** (for a specific domain directory), or **Single-Video Mode** (for case study visualizations). Launch them via the root `run_experiments.py` wrapper.
 
 ### Setup Requirements
 Ensure the environment contains the required packages:
@@ -97,113 +97,94 @@ Ensure the environment contains the required packages:
 pip install torch torchvision transformers accelerate qwen-vl-utils scikit-learn matplotlib
 ```
 
+### Output Directory Structure
+Results for each experiment are automatically saved in domain-specific subdirectories under the output directory:
+- `results/expX/blinking/`
+- `results/expX/bounce_ball/`
+- `results/expX/state_machine/`
+
 ---
 
 ### 1. Run Attention Dispersion Analysis (Exp 1)
 
-*   **Single-Video Mode (Case Study Visualization)**:
+*   **Multi-Domain Mode (Runs on all 3 domains sequentially)**:
     ```bash
-    python run_experiments.py exp1 \
-        --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --output-dir results/exp1 \
-        --device cuda
+    python run_experiments.py exp1 --model-id Qwen/Qwen3-VL-8B-Instruct --device cuda
     ```
-*   **Directory Cohort Mode (General Statistics)**:
+*   **Directory Cohort Mode (Specific domain)**:
     ```bash
-    python run_experiments.py exp1 \
-        --video-dir videos/temporal/blinking \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --output-dir results/exp1 \
-        --device cuda
+    python run_experiments.py exp1 --video-dir videos/temporal/bounce_ball --model-id Qwen/Qwen3-VL-8B-Instruct --device cuda
+    ```
+*   **Single-Video Mode (Case Study)**:
+    ```bash
+    python run_experiments.py exp1 --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 --device cuda
     ```
 
 ---
 
 ### 2. Run Representation Trajectory Analysis (Exp 2)
 
-*   **Single-Video Mode (Case Study PCA & Similarity)**:
+*   **Multi-Domain Mode (Runs on all 3 domains sequentially)**:
     ```bash
-    python run_experiments.py exp2 \
-        --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --layer-idx -2 \
-        --output-dir results/exp2 \
-        --device cuda
+    python run_experiments.py exp2 --model-id Qwen/Qwen3-VL-8B-Instruct --device cuda
     ```
-*   **Directory Cohort Mode (Average Cosine Similarity Profiles)**:
+*   **Directory Cohort Mode (Specific domain)**:
     ```bash
-    python run_experiments.py exp2 \
-        --video-dir videos/temporal/blinking \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --layer-idx -2 \
-        --output-dir results/exp2 \
-        --device cuda
+    python run_experiments.py exp2 --video-dir videos/temporal/bounce_ball --model-id Qwen/Qwen3-VL-8B-Instruct --device cuda
+    ```
+*   **Single-Video Mode (Case Study)**:
+    ```bash
+    python run_experiments.py exp2 --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 --device cuda
     ```
 
 ---
 
 ### 3. Run State Probing (Exp 3)
+*Performs linear state classification mapping targets (`OFF/ON` for Blinking, `Wall A/B` for Bounce, `Cool/Warm` colors for State Machine).*
 
-*   **Single-Video Mode (Evaluate Prober on a Target Video)**:
+*   **Multi-Domain Mode (Runs on all 3 domains sequentially)**:
     ```bash
-    python run_experiments.py exp3 \
-        --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 \
-        --train-dir videos/temporal/blinking \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --layer-idx -2 \
-        --output-dir results/exp3 \
-        --device cuda
+    python run_experiments.py exp3 --max-train-videos 100 --regularization-c 0.1 --device cuda
     ```
-*   **Directory Cohort Mode (General Test Set Statistics)**:
+*   **Directory Cohort Mode (Specific domain)**:
     ```bash
-    python run_experiments.py exp3 \
-        --test-dir videos/temporal/blinking \
-        --train-dir videos/temporal/blinking \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --layer-idx -2 \
-        --output-dir results/exp3 \
-        --device cuda
+    python run_experiments.py exp3 --train-dir videos/temporal/bounce_ball --test-dir videos/temporal/bounce_ball --max-train-videos 100 --regularization-c 0.1 --device cuda
+    ```
+*   **Single-Video Mode (Case Study)**:
+    ```bash
+    python run_experiments.py exp3 --train-dir videos/temporal/blinking --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 --device cuda
     ```
 
 ---
 
 ### 4. Run Preprocessing Ablation (Exp 4)
 
-*   **Single-Video Mode (Single Video Ablation Results)**:
+*   **Multi-Domain Mode (Runs on all 3 domains sequentially)**:
     ```bash
-    python run_experiments.py exp4 \
-        --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --output-dir results/exp4 \
-        --device cuda
+    python run_experiments.py exp4 --model-id Qwen/Qwen3-VL-8B-Instruct --device cuda
     ```
-*   **Directory Cohort Mode (Aggregate Ablation Accuracies)**:
+*   **Directory Cohort Mode (Specific domain)**:
     ```bash
-    python run_experiments.py exp4 \
-        --video-dir videos/temporal/blinking \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --output-dir results/exp4 \
-        --device cuda
+    python run_experiments.py exp4 --video-dir videos/temporal/bounce_ball --device cuda
+    ```
+*   **Single-Video Mode (Case Study)**:
+    ```bash
+    python run_experiments.py exp4 --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 --device cuda
     ```
 
 ---
 
 ### 5. Run Logit Lens (Exp 5)
 
-*   **Single-Video Mode (Single target logit lens profile)**:
+*   **Multi-Domain Mode (Runs on first failing video in all 3 domains)**:
     ```bash
-    python run_experiments.py exp5 \
-        --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --output-dir results/exp5 \
-        --device cuda
+    python run_experiments.py exp5 --model-id Qwen/Qwen3-VL-8B-Instruct --device cuda
     ```
-*   **Directory Cohort Mode (Runs on first failing video in directory)**:
+*   **Directory Cohort Mode (Runs on first failing video in specific domain)**:
     ```bash
-    python run_experiments.py exp5 \
-        --video-dir videos/temporal/blinking \
-        --model-id Qwen/Qwen3-VL-8B-Instruct \
-        --output-dir results/exp5 \
-        --device cuda
+    python run_experiments.py exp5 --video-dir videos/temporal/bounce_ball --device cuda
+    ```
+*   **Single-Video Mode (Case Study)**:
+    ```bash
+    python run_experiments.py exp5 --video-path videos/temporal/blinking/questions/sweep_count_blinks_c10_f0.5_s0_d24.0_count_blinks.mp4 --device cuda
     ```
