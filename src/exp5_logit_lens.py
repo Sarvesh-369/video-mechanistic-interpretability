@@ -202,6 +202,15 @@ def main():
                 print(f"  Error running Logit Lens: {e}")
                 import traceback
                 traceback.print_exc()
+            finally:
+                if "inputs" in locals():
+                    del inputs
+                if "results" in locals():
+                    del results
+                import gc
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()

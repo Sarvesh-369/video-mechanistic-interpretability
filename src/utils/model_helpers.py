@@ -249,9 +249,14 @@ def extract_representation_trajectory(model, inputs, processor, layer_idx=-1):
     video_grid_thw = inputs["video_grid_thw"][0].cpu().numpy()
     T, H, W = int(video_grid_thw[0]), int(video_grid_thw[1]), int(video_grid_thw[2])
     
-    # Retrieve hidden states for target layer
-    # outputs.hidden_states is a tuple of length num_layers + 1
-    hidden_states = outputs.hidden_states[layer_idx][0] # shape: (seq_len, hidden_dim)
+    hidden_states = outputs.hidden_states[layer_idx][0].clone() # shape: (seq_len, hidden_dim)
+    
+    # Free other hidden states layers from memory
+    del outputs
+    import gc
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     
     # Try to extract the precise visual placeholder tokens (excluding any structure/newlines)
     video_pad_id = vocab.get("<|video_pad|>", None)

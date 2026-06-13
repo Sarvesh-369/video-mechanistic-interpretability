@@ -1,6 +1,7 @@
 import os
 import argparse
 import json
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
@@ -204,6 +205,15 @@ def main():
                 all_metrics.append(metrics)
             except Exception as e:
                 print(f"    Error processing {video_path}: {e}")
+            finally:
+                if "inputs" in locals():
+                    del inputs
+                if "trajectory" in locals():
+                    del trajectory
+                import gc
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
                 
         if not all_metrics:
             continue

@@ -21,9 +21,6 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
     """
     device = next(model.parameters()).device
     
-    with torch.no_grad():
-        outputs = model(**inputs, output_attentions=True)
-    
     input_ids = inputs["input_ids"][0]
     
     # Locate visual tokens
@@ -48,22 +45,79 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
     video_grid_thw = inputs["video_grid_thw"][0].cpu().numpy()
     T, H, W = int(video_grid_thw[0]), int(video_grid_thw[1]), int(video_grid_thw[2])
     
-    # Extract attention maps
-    num_layers = len(outputs.attentions)
-    num_heads = outputs.attentions[0].shape[1]
+    # Register forward hooks on attention modules to slice attention weights on-the-fly.
+    # This prevents storing 40 layers of (seq_len, seq_len) attention matrices in GPU memory.
+    captured_attentions = {}
+    hooks = []
+    
+    def get_hook_fn(layer_idx):
+        def hook_fn(module, input_args, output):
+            # output is a tuple: (attn_output, attn_weights, present_key_value)
+            # or (attn_output, attn_weights) depending on config
+            if isinstance(output, tuple) and len(output) > 1 and output[1] is not None:
+                attn_weights = output[1]
+                # Slice: shape (batch_size, num_heads, seq_len, seq_len) -> (batch_size, num_heads, num_vision_tokens)
+                sliced = attn_weights[:, :, query_token_pos, start_idx:end_idx].clone().cpu()
+                captured_attentions[layer_idx] = sliced
+                
+                # Replace the huge tensor with a small dummy tensor to free VRAM
+                new_output = list(output)
+                new_output[1] = torch.zeros(1, 1, 1, 1, device=attn_weights.device, dtype=attn_weights.dtype)
+                return tuple(new_output)
+            return output
+        return hook_fn
+
+    # Find attention layers dynamically
+    attn_modules = []
+    if hasattr(model, "model") and hasattr(model.model, "layers"):
+        layers = model.model.layers
+    elif hasattr(model, "layers"):
+        layers = model.layers
+    else:
+        layers = None
+        
+    if layers is not None:
+        for idx, layer in enumerate(layers):
+            if hasattr(layer, "self_attn"):
+                attn_modules.append((idx, layer.self_attn))
+    else:
+        # Fallback recursive search
+        idx = 0
+        for name, module in model.named_modules():
+            if name.endswith(".self_attn"):
+                attn_modules.append((idx, module))
+                idx += 1
+                
+    for layer_idx, module in attn_modules:
+        hook = module.register_forward_hook(get_hook_fn(layer_idx))
+        hooks.append(hook)
+        
+    try:
+        with torch.no_grad():
+            outputs = model(**inputs, output_attentions=True)
+    finally:
+        # Ensure hooks are always removed
+        for hook in hooks:
+            hook.remove()
+            
+    num_layers = len(attn_modules) if len(attn_modules) > 0 else model.config.num_hidden_layers
+    num_heads = model.config.num_attention_heads
     
     layer_entropies = []
     layer_attentions = []
     
     for layer in range(num_layers):
-        attn_matrix = outputs.attentions[layer][0].float().cpu().numpy() # shape: (num_heads, seq_len, seq_len)
+        if layer not in captured_attentions:
+            raise RuntimeError(f"Attention weights for layer {layer} were not captured by hooks.")
+            
+        # shape: (num_heads, num_vision_tokens)
+        sliced_attn = captured_attentions[layer][0].float().numpy()
         
         head_entropies = []
         head_attns = []
         
         for head in range(num_heads):
-            # Extract attention weights
-            query_to_vision = attn_matrix[head, query_token_pos, start_idx:end_idx]
+            query_to_vision = sliced_attn[head]
             
             temporal_attn = np.zeros(T)
             patches_per_frame = H * W
@@ -91,7 +145,7 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
         layer_entropies.append(head_entropies)
         layer_attentions.append(head_attns)
         
-    return {
+    ret = {
         "num_layers": num_layers,
         "num_heads": num_heads,
         "T": int(T),
@@ -99,6 +153,17 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
         "layer_attentions": layer_attentions, # shape: (layers, heads, T)
         "max_possible_entropy": float(np.log(T))
     }
+    
+    # Free memory
+    del outputs
+    del captured_attentions
+    import gc
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        
+    return ret
+
 
 def plot_attention_dispersion(results, output_image_path):
     """
@@ -251,6 +316,15 @@ def main():
                 all_results.append(results)
             except Exception as e:
                 print(f"    Error processing {video_path}: {e}")
+            finally:
+                if "inputs" in locals():
+                    del inputs
+                if "results" in locals():
+                    del results
+                import gc
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
                 
         if not all_results:
             continue

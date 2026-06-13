@@ -94,7 +94,7 @@ All scripts can be run in **Multi-Domain Mode** (defaulting to run on all 3 doma
 ### Setup Requirements
 Ensure the environment contains the required packages:
 ```bash
-pip install torch torchvision transformers accelerate qwen-vl-utils scikit-learn matplotlib
+pip install torch torchvision transformers accelerate qwen-vl-utils scikit-learn matplotlib num2words
 ```
 
 ### Output Directory Structure
