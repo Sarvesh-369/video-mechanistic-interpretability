@@ -264,10 +264,15 @@ def main():
                 except Exception as e:
                     print(f"    Error processing {video_path}: {e}")
                 finally:
-                    if "inputs" in locals():
-                        del inputs
+                    # Aggressive cleanup of input and generation tensors
+                    if "inputs" in locals() and inputs is not None:
+                        for k in list(inputs.keys()):
+                            inputs[k] = None
+                        inputs = None
                     if "trajectory" in locals():
-                        del trajectory
+                        trajectory = None
+                    if "generated_ids" in locals():
+                        generated_ids = None
                     import gc
                     gc.collect()
                     if torch.cuda.is_available():

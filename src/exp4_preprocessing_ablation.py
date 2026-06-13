@@ -204,6 +204,17 @@ def main():
                             "error": str(e),
                             "correct": False
                         }
+                    finally:
+                        if "inputs" in locals() and inputs is not None:
+                            for k in list(inputs.keys()):
+                                inputs[k] = None
+                            inputs = None
+                        if "output_ids" in locals():
+                            output_ids = None
+                        import gc
+                        gc.collect()
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
                         
                 results_summary.append(instance_results)
                 

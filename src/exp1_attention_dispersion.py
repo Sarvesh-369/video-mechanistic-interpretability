@@ -59,7 +59,7 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
                 if isinstance(output, tuple) and len(output) > 1 and output[1] is not None:
                     attn_weights = output[1]
                     # Slice: shape (batch_size, num_heads, seq_len, seq_len) -> (batch_size, num_heads, num_vision_tokens)
-                    sliced = attn_weights[:, :, query_token_pos, start_idx:end_idx].clone().cpu()
+                    sliced = attn_weights[:, :, query_token_pos, start_idx:end_idx].detach().clone().cpu()
                     captured_attentions[layer_idx] = sliced
                     
                     # Replace the huge tensor with a small dummy tensor to free VRAM
@@ -342,10 +342,15 @@ def main():
                 except Exception as e:
                     print(f"    Error processing {video_path}: {e}")
                 finally:
-                    if "inputs" in locals():
-                        del inputs
+                    # Aggressive cleanup of input and generation tensors
+                    if "inputs" in locals() and inputs is not None:
+                        for k in list(inputs.keys()):
+                            inputs[k] = None
+                        inputs = None
                     if "results" in locals():
-                        del results
+                        results = None
+                    if "generated_ids" in locals():
+                        generated_ids = None
                     import gc
                     gc.collect()
                     if torch.cuda.is_available():

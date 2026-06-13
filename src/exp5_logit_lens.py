@@ -235,10 +235,15 @@ def main():
                     import traceback
                     traceback.print_exc()
                 finally:
-                    if "inputs" in locals():
-                        del inputs
+                    # Aggressive cleanup of input and generation tensors
+                    if "inputs" in locals() and inputs is not None:
+                        for k in list(inputs.keys()):
+                            inputs[k] = None
+                        inputs = None
                     if "results" in locals():
-                        del results
+                        results = None
+                    if "generated_ids" in locals():
+                        generated_ids = None
                     import gc
                     gc.collect()
                     if torch.cuda.is_available():
