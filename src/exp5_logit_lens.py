@@ -57,29 +57,43 @@ def run_logit_lens(model, inputs, processor, correct_token_str, alternative_toke
 
 def plot_logit_lens(results, output_image_path, title):
     """
-    Plots the logit lens probabilities across the model's layers.
+    Plots the logit lens probabilities across the model's layers with side-by-side
+    linear and log-scale subplots.
     """
     layers = results["num_layers"]
     correct_token = results["correct_token"]
     correct_probs = results["correct_probs"]
     alt_probs = results["alternative_probs"]
     
-    plt.figure(figsize=(10, 5))
-    
-    # Plot correct token probability
-    plt.plot(range(layers + 1), correct_probs, label=f"Correct ('{correct_token}')", color='green', linewidth=2.5, marker='o')
-    
-    # Plot alternative tokens probabilities
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     colors = ['orange', 'red', 'blue', 'purple']
+    
+    # Left subplot: Linear Scale
+    axes[0].plot(range(layers + 1), correct_probs, label=f"Correct ('{correct_token}')", color='green', linewidth=2.5, marker='o')
     for idx, (token_str, probs) in enumerate(alt_probs.items()):
         color = colors[idx % len(colors)]
-        plt.plot(range(layers + 1), probs, label=f"Alternative ('{token_str}')", color=color, linestyle='--', marker='x')
-        
-    plt.xlabel('Layer Index')
-    plt.ylabel('Vocabulary Probability')
-    plt.title(title)
-    plt.grid(True)
-    plt.legend()
+        axes[0].plot(range(layers + 1), probs, label=f"Alternative ('{token_str}')", color=color, linestyle='--', marker='x')
+    axes[0].set_xlabel('Layer Index')
+    axes[0].set_ylabel('Vocabulary Probability')
+    axes[0].set_title('Linear Scale')
+    axes[0].grid(True)
+    axes[0].legend()
+    
+    # Right subplot: Log Scale
+    axes[1].plot(range(layers + 1), correct_probs, label=f"Correct ('{correct_token}')", color='green', linewidth=2.5, marker='o')
+    for idx, (token_str, probs) in enumerate(alt_probs.items()):
+        color = colors[idx % len(colors)]
+        axes[1].plot(range(layers + 1), probs, label=f"Alternative ('{token_str}')", color=color, linestyle='--', marker='x')
+    axes[1].set_yscale('log')
+    # Set reasonable bounds for log scale (e.g. 1e-6 to 1.5) to avoid -inf issues
+    axes[1].set_ylim([1e-6, 1.5])
+    axes[1].set_xlabel('Layer Index')
+    axes[1].set_ylabel('Vocabulary Probability (Log)')
+    axes[1].set_title('Log Scale (Lower bound 1e-6)')
+    axes[1].grid(True, which='both', linestyle=':', alpha=0.5)
+    axes[1].legend()
+    
+    fig.suptitle(title, fontsize=12, fontweight='bold')
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=300)
     plt.close()
