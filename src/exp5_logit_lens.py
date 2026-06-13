@@ -91,7 +91,7 @@ def main():
     parser.add_argument("--model-id", type=str, default="Qwen/Qwen3-VL-8B-Instruct", help="Hugging Face model ID")
     parser.add_argument("--output-dir", type=str, default="results/exp5", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
-    parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode (cot or direct)")
+    parser.add_argument("--prompt-mode", type=str, default="both", choices=["cot", "direct", "both"], help="Prompting mode (cot, direct, or both)")
     args = parser.parse_args()
     
     if args.video_path is not None and args.video_dir is not None:
@@ -128,103 +128,78 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
-        output_dir = os.path.join(args.output_dir, domain_name, args.prompt_mode)
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Collect target video instances
-        instances = []
-        if is_single_video:
-            instances.append((get_associated_files(target_path), "single_video"))
-            print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
-        else:
-            all_instances = find_video_files(target_path)
+        # Loop over prompt modes
+        modes_to_run = ["cot", "direct"] if args.prompt_mode == "both" else [args.prompt_mode]
+        for prompt_mode in modes_to_run:
+            print(f"\n--- Running Prompt Mode: {prompt_mode.upper()} ---")
+            output_dir = os.path.join(args.output_dir, domain_name, prompt_mode)
+            os.makedirs(output_dir, exist_ok=True)
             
-            # Select Cohorts A (Easy) and B (Trap)
-            cohort_A = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
-            cohort_B = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
-            
-            import random
-            random.Random(42).shuffle(cohort_A)
-            random.Random(42).shuffle(cohort_B)
-            
-            if cohort_A:
-                instances.append((cohort_A[0], "cohort_A"))
-            if cohort_B:
-                instances.append((cohort_B[0], "cohort_B"))
+            for inst, cohort_label in instances:
+                video_path = inst["video_path"]
+                q_path = inst["question_path"]
+                solution_path = inst["solution_path"]
+                metadata = inst["metadata"]
                 
-            if not instances:
-                print(f"Error: No videos resolved for domain '{domain_name}'.")
-                continue
+                if not q_path or not solution_path:
+                    print(f"Warning: Associated question or solution file not found for {video_path}")
+                    continue
+                    
+                with open(q_path, "r") as f:
+                    raw_question = f.read().strip()
+                    
+                question_text = format_prompt_by_mode(raw_question, prompt_mode)
+                    
+                with open(solution_path, "r") as f:
+                    ground_truth = int(f.read().strip())
+                    
+                print(f"  Running Logit Lens ({cohort_label}) on: {os.path.basename(video_path)} (GT Count = {ground_truth})")
                 
-            print(f"\nResolved diagnostic instances for domain '{domain_name}':")
-            for inst, label in instances:
-                print(f"  - {label}: {os.path.basename(inst['video_path'])}")
-            
-        for inst, cohort_label in instances:
-            video_path = inst["video_path"]
-            q_path = inst["question_path"]
-            solution_path = inst["solution_path"]
-            metadata = inst["metadata"]
-            
-            if not q_path or not solution_path:
-                print(f"Warning: Associated question or solution file not found for {video_path}")
-                continue
+                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
                 
-            with open(q_path, "r") as f:
-                raw_question = f.read().strip()
+                correct_token_str = str(ground_truth)
+                alternative_token_strs = [str(ground_truth - 1), str(ground_truth - 2), str(ground_truth + 1)]
                 
-            question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
-                
-            with open(solution_path, "r") as f:
-                ground_truth = int(f.read().strip())
-                
-            print(f"  Running Logit Lens ({cohort_label}) on: {os.path.basename(video_path)} (GT Count = {ground_truth})")
-            
-            inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
-            
-            correct_token_str = str(ground_truth)
-            alternative_token_strs = [str(ground_truth - 1), str(ground_truth - 2), str(ground_truth + 1)]
-            
-            try:
-                results = run_logit_lens(model, inputs, processor, correct_token_str, alternative_token_strs)
-                results["video_name"] = os.path.basename(video_path)
-                results["cohort"] = cohort_label
-                results["prompt"] = question_text
-                
-                # Run text generation to verify what the model actually outputs
-                print("    Generating model's reasoning and count answer...")
-                with torch.no_grad():
-                    generated_ids = model.generate(**inputs, max_new_tokens=512)
-                    generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
-                    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-                results["generated_response"] = generated_text
-                print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
-                
-                # Save Logit Lens Plot with cohort prefix
-                out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.png")
-                plot_logit_lens(
-                    results, out_img, 
-                    f"Logit Lens Profile ({cohort_label}) for {os.path.basename(video_path)} (GT={ground_truth})"
-                )
-                
-                # Save JSON output with cohort prefix
-                out_json = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.json")
-                with open(out_json, "w") as f:
-                    json.dump(results, f, indent=2)
-                print(f"Finished Logit Lens for {cohort_label} in {domain_name}! Saved to {out_json}")
-            except Exception as e:
-                print(f"  Error running Logit Lens: {e}")
-                import traceback
-                traceback.print_exc()
-            finally:
-                if "inputs" in locals():
-                    del inputs
-                if "results" in locals():
-                    del results
-                import gc
-                gc.collect()
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
+                try:
+                    results = run_logit_lens(model, inputs, processor, correct_token_str, alternative_token_strs)
+                    results["video_name"] = os.path.basename(video_path)
+                    results["cohort"] = cohort_label
+                    results["prompt"] = question_text
+                    
+                    # Run text generation to verify what the model actually outputs
+                    print("    Generating model's reasoning and count answer...")
+                    with torch.no_grad():
+                        generated_ids = model.generate(**inputs, max_new_tokens=512)
+                        generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
+                        generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                    results["generated_response"] = generated_text
+                    print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
+                    
+                    # Save Logit Lens Plot with cohort prefix
+                    out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.png")
+                    plot_logit_lens(
+                        results, out_img, 
+                        f"Logit Lens Profile ({cohort_label}) for {os.path.basename(video_path)} (GT={ground_truth})"
+                    )
+                    
+                    # Save JSON output with cohort prefix
+                    out_json = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.json")
+                    with open(out_json, "w") as f:
+                        json.dump(results, f, indent=2)
+                    print(f"Finished Logit Lens for {cohort_label} in {domain_name} ({prompt_mode})! Saved to {out_json}")
+                except Exception as e:
+                    print(f"  Error running Logit Lens: {e}")
+                    import traceback
+                    traceback.print_exc()
+                finally:
+                    if "inputs" in locals():
+                        del inputs
+                    if "results" in locals():
+                        del results
+                    import gc
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()

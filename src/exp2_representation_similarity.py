@@ -100,7 +100,7 @@ def main():
     parser.add_argument("--layer-idx", type=int, default=-2, help="Layer index to extract hidden states")
     parser.add_argument("--output-dir", type=str, default="results/exp2", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
-    parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode (cot or direct)")
+    parser.add_argument("--prompt-mode", type=str, default="both", choices=["cot", "direct", "both"], help="Prompting mode (cot, direct, or both)")
     args = parser.parse_args()
     
     # Load model and processor once
@@ -130,113 +130,78 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
-        output_dir = os.path.join(args.output_dir, domain_name, args.prompt_mode)
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Collect video instances
-        instances = []
-        if is_single_video:
-            instances.append((get_associated_files(target_path), "single_video"))
-            print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
-        else:
-            all_instances = find_video_files(target_path)
-            print(f"\nTargeting cohort directory for domain '{domain_name}': {target_path} (Found {len(all_instances)} videos)")
+        # Loop over prompt modes
+        modes_to_run = ["cot", "direct"] if args.prompt_mode == "both" else [args.prompt_mode]
+        for prompt_mode in modes_to_run:
+            print(f"\n--- Running Prompt Mode: {prompt_mode.upper()} ---")
+            output_dir = os.path.join(args.output_dir, domain_name, prompt_mode)
+            os.makedirs(output_dir, exist_ok=True)
             
-            # Select Cohorts A, B, and C:
-            # Cohort A (Easy): N <= 3, f <= 1.0
-            cohort_A = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
-            # Cohort B (Trap): N >= 5, f <= 1.0
-            cohort_B = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
-            # Cohort C (High-Freq): N >= 5, f >= 3.0
-            cohort_C = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] >= 3.0]
+            all_metrics = []
             
-            import random
-            # Shuffle deterministically to get diverse seeds
-            random.Random(42).shuffle(cohort_A)
-            random.Random(42).shuffle(cohort_B)
-            random.Random(42).shuffle(cohort_C)
-            
-            # Select up to 4 representative videos from each cohort
-            selected_cohort_A = cohort_A[:4]
-            selected_cohort_B = cohort_B[:4]
-            selected_cohort_C = cohort_C[:4]
-            
-            for inst in selected_cohort_A:
-                instances.append((inst, "cohort_A"))
-            for inst in selected_cohort_B:
-                instances.append((inst, "cohort_B"))
-            for inst in selected_cohort_C:
-                instances.append((inst, "cohort_C"))
-            
-            print(f"  Selected {len(selected_cohort_A)} videos for Cohort A (Easy)")
-            print(f"  Selected {len(selected_cohort_B)} videos for Cohort B (Trap)")
-            print(f"  Selected {len(selected_cohort_C)} videos for Cohort C (High-Freq)")
-            
-        all_metrics = []
-        
-        for idx, (inst, cohort_label) in enumerate(instances):
-            video_path = inst["video_path"]
-            q_path = inst["question_path"]
-            metadata = inst["metadata"]
-            
-            print(f"  Processing [{idx+1}/{len(instances)}] ({cohort_label}): {os.path.basename(video_path)}")
-            
-            if not q_path:
-                raw_question = "How many times did the object flash?"
-                print(f"    Warning: Question file not found. Using default question.")
-            else:
-                with open(q_path, "r") as f:
-                    raw_question = f.read().strip()
+            for idx, (inst, cohort_label) in enumerate(instances):
+                video_path = inst["video_path"]
+                q_path = inst["question_path"]
+                metadata = inst["metadata"]
+                
+                print(f"  Processing [{idx+1}/{len(instances)}] ({cohort_label}): {os.path.basename(video_path)}")
+                
+                if not q_path:
+                    raw_question = "How many times did the object flash?"
+                    print(f"    Warning: Question file not found. Using default question.")
+                else:
+                    with open(q_path, "r") as f:
+                        raw_question = f.read().strip()
+                        
+                question_text = format_prompt_by_mode(raw_question, prompt_mode)
+                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
+                
+                try:
+                    # Extract representations
+                    trajectory = extract_representation_trajectory(model, inputs, processor, layer_idx=args.layer_idx)
                     
-            question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
-            inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
-            
-            try:
-                # Extract representations
-                trajectory = extract_representation_trajectory(model, inputs, processor, layer_idx=args.layer_idx)
+                    # Compute similarities & PCA coordinates
+                    metrics = compute_trajectory_metrics(trajectory)
+                    metrics["metadata"] = metadata
+                    metrics["video_name"] = os.path.basename(video_path)
+                    metrics["cohort"] = cohort_label
+                    metrics["prompt"] = question_text
+                    
+                    # Run text generation to verify what the model actually outputs
+                    print("    Generating model's reasoning and count answer...")
+                    with torch.no_grad():
+                        generated_ids = model.generate(**inputs, max_new_tokens=512)
+                        generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
+                        generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                    metrics["generated_response"] = generated_text
+                    print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
+                    
+                    # Save visual plots for each video with cohort label in filename
+                    out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_repr.png")
+                    plot_representation_analysis(metrics, out_img)
+                    
+                    all_metrics.append(metrics)
+                except Exception as e:
+                    print(f"    Error processing {video_path}: {e}")
+                finally:
+                    if "inputs" in locals():
+                        del inputs
+                    if "trajectory" in locals():
+                        del trajectory
+                    import gc
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    
+            if not all_metrics:
+                continue
                 
-                # Compute similarities & PCA coordinates
-                metrics = compute_trajectory_metrics(trajectory)
-                metrics["metadata"] = metadata
-                metrics["video_name"] = os.path.basename(video_path)
-                metrics["cohort"] = cohort_label
-                metrics["prompt"] = question_text
+            # Save results summary to JSON
+            out_json = os.path.join(output_dir, "representation_similarity_summary.json")
+            with open(out_json, "w") as f:
+                json.dump(all_metrics, f, indent=2)
                 
-                # Run text generation to verify what the model actually outputs
-                print("    Generating model's reasoning and count answer...")
-                with torch.no_grad():
-                    generated_ids = model.generate(**inputs, max_new_tokens=512)
-                    generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
-                    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-                metrics["generated_response"] = generated_text
-                print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
-                
-                # Save visual plots for each video with cohort label in filename
-                out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_repr.png")
-                plot_representation_analysis(metrics, out_img)
-                
-                all_metrics.append(metrics)
-            except Exception as e:
-                print(f"    Error processing {video_path}: {e}")
-            finally:
-                if "inputs" in locals():
-                    del inputs
-                if "trajectory" in locals():
-                    del trajectory
-                import gc
-                gc.collect()
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                
-        if not all_metrics:
-            continue
-            
-        # Save results summary to JSON
-        out_json = os.path.join(output_dir, "representation_similarity_summary.json")
-        with open(out_json, "w") as f:
-            json.dump(all_metrics, f, indent=2)
-            
-        print(f"Finished representation similarity analysis for {domain_name}! Summary saved to {out_json}")
+            print(f"Finished representation similarity analysis for {domain_name} ({prompt_mode})! Summary saved to {out_json}")
 
 if __name__ == "__main__":
     main()
