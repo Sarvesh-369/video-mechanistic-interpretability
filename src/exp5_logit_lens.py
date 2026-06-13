@@ -186,6 +186,16 @@ def main():
                 results = run_logit_lens(model, inputs, processor, correct_token_str, alternative_token_strs)
                 results["video_name"] = os.path.basename(video_path)
                 results["cohort"] = cohort_label
+                results["prompt"] = question_text
+                
+                # Run text generation to verify what the model actually outputs
+                print("    Generating model's reasoning and count answer...")
+                with torch.no_grad():
+                    generated_ids = model.generate(**inputs, max_new_tokens=512)
+                    generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
+                    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                results["generated_response"] = generated_text
+                print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
                 
                 # Save Logit Lens Plot with cohort prefix
                 out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.png")

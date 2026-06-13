@@ -308,6 +308,16 @@ def main():
                 results["metadata"] = metadata
                 results["video_name"] = os.path.basename(video_path)
                 results["cohort"] = cohort_label
+                results["prompt"] = question_text
+                
+                # Run text generation to check what the model actually outputs
+                print("    Generating model's reasoning and count answer...")
+                with torch.no_grad():
+                    generated_ids = model.generate(**inputs, max_new_tokens=512)
+                    generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
+                    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                results["generated_response"] = generated_text
+                print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
                 
                 # Save visual plots for each video with cohort label in filename
                 out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_attn.png")
@@ -337,6 +347,8 @@ def main():
                 "video_name": r["video_name"],
                 "cohort": r.get("cohort", "single_video"),
                 "metadata": r["metadata"],
+                "prompt": r.get("prompt", ""),
+                "generated_response": r.get("generated_response", ""),
                 "layer_entropies": r["layer_entropies"],
                 "max_possible_entropy": r["max_possible_entropy"]
             })
