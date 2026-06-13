@@ -201,7 +201,7 @@ def main():
             except Exception as e:
                 print(f"  Error running Logit Lens: {e}")
                 import traceback
-                traceback.print_exc()")
+                traceback.print_exc()
 
 if __name__ == "__main__":
     main()
