@@ -167,6 +167,7 @@ def main():
                 "video_name": os.path.basename(video_path),
                 "metadata": metadata,
                 "ground_truth": ground_truth,
+                "prompt": question_text,
                 "predictions": {}
             }
             
