@@ -253,6 +253,45 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
+        # Collect video instances
+        instances = []
+        if is_single_video:
+            instances.append((get_associated_files(target_path), "single_video"))
+            print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
+        else:
+            all_instances = find_video_files(target_path)
+            print(f"\nTargeting cohort directory for domain '{domain_name}': {target_path} (Found {len(all_instances)} videos)")
+            
+            # Select Cohorts A, B, and C:
+            # Cohort A (Easy): N <= 3, f <= 1.0
+            cohort_A = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            # Cohort B (Trap): N >= 5, f <= 1.0
+            cohort_B = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            # Cohort C (High-Freq): N >= 5, f >= 3.0
+            cohort_C = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] >= 3.0]
+            
+            import random
+            # Shuffle deterministically to get diverse seeds
+            random.Random(42).shuffle(cohort_A)
+            random.Random(42).shuffle(cohort_B)
+            random.Random(42).shuffle(cohort_C)
+            
+            # Select up to 4 representative videos from each cohort
+            selected_cohort_A = cohort_A[:4]
+            selected_cohort_B = cohort_B[:4]
+            selected_cohort_C = cohort_C[:4]
+            
+            for inst in selected_cohort_A:
+                instances.append((inst, "cohort_A"))
+            for inst in selected_cohort_B:
+                instances.append((inst, "cohort_B"))
+            for inst in selected_cohort_C:
+                instances.append((inst, "cohort_C"))
+            
+            print(f"  Selected {len(selected_cohort_A)} videos for Cohort A (Easy)")
+            print(f"  Selected {len(selected_cohort_B)} videos for Cohort B (Trap)")
+            print(f"  Selected {len(selected_cohort_C)} videos for Cohort C (High-Freq)")
+
         # Loop over prompt modes
         modes_to_run = ["cot", "direct"] if args.prompt_mode == "both" else [args.prompt_mode]
         for prompt_mode in modes_to_run:

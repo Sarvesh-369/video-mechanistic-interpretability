@@ -96,6 +96,48 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
+        # Preprocessing configs to ablate
+        configs = {
+            "Baseline": {
+                # Uses processor defaults
+            },
+            "High_Temporal_Resolution": {
+                "fps": 4.0
+            },
+            "High_Spatial_Resolution": {
+                "min_pixels": 512 * 512,
+                "max_pixels": 602112
+            },
+            "High_Temporal_And_Spatial": {
+                "fps": 4.0,
+                "min_pixels": 512 * 512,
+                "max_pixels": 602112
+            }
+        }
+        
+        # Collect instances
+        instances = []
+        if is_single_video:
+            instances.append(get_associated_files(target_path))
+            print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
+        else:
+            # Find boundary cases in directory: c in [4, 6] and f <= 1.0
+            all_instances = find_video_files(target_path)
+            boundary_instances = [
+                inst for inst in all_instances 
+                if inst["metadata"]["count"] is not None 
+                and 4 <= inst["metadata"]["count"] <= 6
+                and inst["metadata"]["frequency"] is not None
+                and inst["metadata"]["frequency"] <= 1.0
+            ]
+            
+            # Fallback to any videos if boundary instances not found
+            if not boundary_instances:
+                boundary_instances = all_instances[:8]
+                
+            instances = boundary_instances[:10]
+            print(f"\nTargeting boundary cohort directory for domain '{domain_name}': {target_path} (Found {len(instances)} boundary instances)")
+
         # Loop over prompt modes
         modes_to_run = ["cot", "direct"] if args.prompt_mode == "both" else [args.prompt_mode]
         for prompt_mode in modes_to_run:

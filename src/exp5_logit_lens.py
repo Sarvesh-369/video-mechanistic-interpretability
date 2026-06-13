@@ -128,6 +128,35 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
+        # Collect target video instances
+        instances = []
+        if is_single_video:
+            instances.append((get_associated_files(target_path), "single_video"))
+            print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
+        else:
+            all_instances = find_video_files(target_path)
+            
+            # Select Cohorts A (Easy) and B (Trap)
+            cohort_A = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            cohort_B = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            
+            import random
+            random.Random(42).shuffle(cohort_A)
+            random.Random(42).shuffle(cohort_B)
+            
+            if cohort_A:
+                instances.append((cohort_A[0], "cohort_A"))
+            if cohort_B:
+                instances.append((cohort_B[0], "cohort_B"))
+                
+            if not instances:
+                print(f"Error: No videos resolved for domain '{domain_name}'.")
+                continue
+                
+            print(f"\nResolved diagnostic instances for domain '{domain_name}':")
+            for inst, label in instances:
+                print(f"  - {label}: {os.path.basename(inst['video_path'])}")
+
         # Loop over prompt modes
         modes_to_run = ["cot", "direct"] if args.prompt_mode == "both" else [args.prompt_mode]
         for prompt_mode in modes_to_run:
