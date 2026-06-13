@@ -10,7 +10,8 @@ from src.utils.model_helpers import (
     prepare_video_inputs, 
     find_video_files, 
     get_associated_files, 
-    extract_representation_trajectory
+    extract_representation_trajectory,
+    format_prompt_by_mode
 )
 
 def compute_trajectory_metrics(trajectory):
@@ -99,6 +100,7 @@ def main():
     parser.add_argument("--layer-idx", type=int, default=-2, help="Layer index to extract hidden states")
     parser.add_argument("--output-dir", type=str, default="results/exp2", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
+    parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode (cot or direct)")
     args = parser.parse_args()
     
     # Load model and processor once
@@ -128,7 +130,7 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
-        output_dir = os.path.join(args.output_dir, domain_name)
+        output_dir = os.path.join(args.output_dir, domain_name, args.prompt_mode)
         os.makedirs(output_dir, exist_ok=True)
         
         # Collect video instances
@@ -180,12 +182,13 @@ def main():
             print(f"  Processing [{idx+1}/{len(instances)}] ({cohort_label}): {os.path.basename(video_path)}")
             
             if not q_path:
-                question_text = "How many times did the object flash? Show your reasoning and put the final answer in \\boxed{}"
-                print(f"    Warning: Question file not found. Using default question: '{question_text}'")
+                raw_question = "How many times did the object flash?"
+                print(f"    Warning: Question file not found. Using default question.")
             else:
                 with open(q_path, "r") as f:
-                    question_text = f.read().strip()
+                    raw_question = f.read().strip()
                     
+            question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
             inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
             
             try:

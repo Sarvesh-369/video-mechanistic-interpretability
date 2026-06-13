@@ -3,7 +3,7 @@ import argparse
 import json
 import torch
 import re
-from src.utils.model_helpers import load_model_and_processor, get_associated_files, find_video_files
+from src.utils.model_helpers import load_model_and_processor, get_associated_files, find_video_files, format_prompt_by_mode
 from qwen_vl_utils import process_vision_info
 
 def prepare_inputs_with_ablation(video_path, question_text, processor, device, config):
@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--model-id", type=str, default="Qwen/Qwen3-VL-8B-Instruct", help="Hugging Face model ID")
     parser.add_argument("--output-dir", type=str, default="results/exp4", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
+    parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode (cot or direct)")
     args = parser.parse_args()
     
     # Load model and processor once
@@ -95,7 +96,7 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
-        output_dir = os.path.join(args.output_dir, domain_name)
+        output_dir = os.path.join(args.output_dir, domain_name, args.prompt_mode)
         os.makedirs(output_dir, exist_ok=True)
         
         # Preprocessing configs to ablate
@@ -152,11 +153,9 @@ def main():
                 continue
                 
             with open(q_path, "r") as f:
-                question_text = f.read().strip()
+                raw_question = f.read().strip()
                 
-            # Enforce that the prompt asks for a boxed final answer
-            if "boxed" not in question_text.lower():
-                question_text += " Show your reasoning step-by-step and put the final numeric count in \\boxed{}."
+            question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
                 
             with open(solution_path, "r") as f:
                 ground_truth = int(f.read().strip())

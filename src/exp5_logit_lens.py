@@ -4,7 +4,7 @@ import json
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
-from src.utils.model_helpers import load_model_and_processor, prepare_video_inputs, get_associated_files, find_video_files
+from src.utils.model_helpers import load_model_and_processor, prepare_video_inputs, get_associated_files, find_video_files, format_prompt_by_mode
 
 def run_logit_lens(model, inputs, processor, correct_token_str, alternative_token_strs):
     """
@@ -91,6 +91,7 @@ def main():
     parser.add_argument("--model-id", type=str, default="Qwen/Qwen3-VL-8B-Instruct", help="Hugging Face model ID")
     parser.add_argument("--output-dir", type=str, default="results/exp5", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
+    parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode (cot or direct)")
     args = parser.parse_args()
     
     if args.video_path is not None and args.video_dir is not None:
@@ -127,7 +128,7 @@ def main():
         elif "state" in target_path.lower() or "transition" in target_path.lower():
             domain_name = "state_machine"
             
-        output_dir = os.path.join(args.output_dir, domain_name)
+        output_dir = os.path.join(args.output_dir, domain_name, args.prompt_mode)
         os.makedirs(output_dir, exist_ok=True)
         
         # Collect target video instances
@@ -170,7 +171,9 @@ def main():
                 continue
                 
             with open(q_path, "r") as f:
-                question_text = f.read().strip()
+                raw_question = f.read().strip()
+                
+            question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
                 
             with open(solution_path, "r") as f:
                 ground_truth = int(f.read().strip())

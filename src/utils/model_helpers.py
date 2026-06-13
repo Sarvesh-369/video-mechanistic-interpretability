@@ -306,3 +306,18 @@ def extract_representation_trajectory(model, inputs, processor, layer_idx=-1):
         
     return temporal_trajectory
 
+
+def format_prompt_by_mode(base_question, prompt_mode):
+    """
+    Cleans any existing CoT instructions from the question and appends
+    either CoT or Direct Answer instructions based on prompt_mode.
+    """
+    clean_question = base_question.split("Show your reasoning")[0].split("Answer with")[0].strip()
+    if not clean_question.endswith("?") and not clean_question.endswith("."):
+        clean_question += "?"
+        
+    if prompt_mode == "cot":
+        return f"{clean_question} Show your reasoning step-by-step and put the final numeric count in \\boxed{{}}."
+    else:
+        return f"{clean_question} Answer with a single numeric count only inside \\boxed{{}} with no other text."
+

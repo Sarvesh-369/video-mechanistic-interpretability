@@ -97,11 +97,10 @@ Ensure the environment contains the required packages:
 pip install torch torchvision transformers accelerate qwen-vl-utils scikit-learn matplotlib num2words
 ```
 
-### Output Directory Structure
-Results for each experiment are automatically saved in domain-specific subdirectories under the output directory:
-- `results/expX/blinking/`
-- `results/expX/bounce_ball/`
-- `results/expX/state_machine/`
+### Output Directory Structure and Prompt Modes
+All experiments (except Experiment 3) support the `--prompt-mode` CLI parameter with choices `cot` (Chain-of-Thought reasoning, default) and `direct` (Zero-Shot Direct Answer). Results for each experiment are automatically isolated in prompt-mode subdirectories under the domain-specific output directory:
+- `results/expX/<domain_name>/cot/`
+- `results/expX/<domain_name>/direct/`
 
 ---
 
