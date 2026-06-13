@@ -129,66 +129,79 @@ def main():
         output_dir = os.path.join(args.output_dir, domain_name)
         os.makedirs(output_dir, exist_ok=True)
         
-        # Resolve target video
+        # Collect target video instances
+        instances = []
         if is_single_video:
-            inst = get_associated_files(target_path)
+            instances.append((get_associated_files(target_path), "single_video"))
             print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
         else:
-            # Select first failing video from directory
             all_instances = find_video_files(target_path)
-            failing_instances = [i for i in all_instances if i["metadata"]["count"] is not None and i["metadata"]["count"] >= 5]
-            if not failing_instances:
-                failing_instances = all_instances
+            
+            # Select Cohorts A (Easy) and B (Trap)
+            cohort_A = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            cohort_B = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            
+            import random
+            random.Random(42).shuffle(cohort_A)
+            random.Random(42).shuffle(cohort_B)
+            
+            if cohort_A:
+                instances.append((cohort_A[0], "cohort_A"))
+            if cohort_B:
+                instances.append((cohort_B[0], "cohort_B"))
                 
-            if not failing_instances:
-                print(f"Error: No videos found in directory {target_path}.")
+            if not instances:
+                print(f"Error: No videos resolved for domain '{domain_name}'.")
                 continue
                 
-            inst = failing_instances[0]
-            print(f"\nTargeting first failing video from directory for domain '{domain_name}': {inst['video_path']}")
+            print(f"\nResolved diagnostic instances for domain '{domain_name}':")
+            for inst, label in instances:
+                print(f"  - {label}: {os.path.basename(inst['video_path'])}")
             
-        video_path = inst["video_path"]
-        q_path = inst["question_path"]
-        solution_path = inst["solution_path"]
-        metadata = inst["metadata"]
-        
-        if not q_path or not solution_path:
-            print(f"Warning: Associated question or solution file not found for {video_path}")
-            continue
+        for inst, cohort_label in instances:
+            video_path = inst["video_path"]
+            q_path = inst["question_path"]
+            solution_path = inst["solution_path"]
+            metadata = inst["metadata"]
             
-        with open(q_path, "r") as f:
-            question_text = f.read().strip()
+            if not q_path or not solution_path:
+                print(f"Warning: Associated question or solution file not found for {video_path}")
+                continue
+                
+            with open(q_path, "r") as f:
+                question_text = f.read().strip()
+                
+            with open(solution_path, "r") as f:
+                ground_truth = int(f.read().strip())
+                
+            print(f"  Running Logit Lens ({cohort_label}) on: {os.path.basename(video_path)} (GT Count = {ground_truth})")
             
-        with open(solution_path, "r") as f:
-            ground_truth = int(f.read().strip())
+            inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
             
-        print(f"  Running Logit Lens on: {os.path.basename(video_path)} (GT Count = {ground_truth})")
-        
-        inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
-        
-        correct_token_str = str(ground_truth)
-        alternative_token_strs = [str(ground_truth - 1), str(ground_truth - 2), str(ground_truth + 1)]
-        
-        try:
-            results = run_logit_lens(model, inputs, processor, correct_token_str, alternative_token_strs)
-            results["video_name"] = os.path.basename(video_path)
+            correct_token_str = str(ground_truth)
+            alternative_token_strs = [str(ground_truth - 1), str(ground_truth - 2), str(ground_truth + 1)]
             
-            # Save Logit Lens Plot
-            out_img = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.png")
-            plot_logit_lens(
-                results, out_img, 
-                f"Logit Lens Profile for {os.path.basename(video_path)} (GT={ground_truth})"
-            )
-            
-            # Save JSON output
-            out_json = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.json")
-            with open(out_json, "w") as f:
-                json.dump(results, f, indent=2)
-            print(f"Finished Experiment 5 for {domain_name}! Summary saved to {out_json}")
-        except Exception as e:
-            print(f"  Error running Logit Lens: {e}")
-            import traceback
-            traceback.print_exc()
+            try:
+                results = run_logit_lens(model, inputs, processor, correct_token_str, alternative_token_strs)
+                results["video_name"] = os.path.basename(video_path)
+                results["cohort"] = cohort_label
+                
+                # Save Logit Lens Plot with cohort prefix
+                out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.png")
+                plot_logit_lens(
+                    results, out_img, 
+                    f"Logit Lens Profile ({cohort_label}) for {os.path.basename(video_path)} (GT={ground_truth})"
+                )
+                
+                # Save JSON output with cohort prefix
+                out_json = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_logit_lens.json")
+                with open(out_json, "w") as f:
+                    json.dump(results, f, indent=2)
+                print(f"Finished Logit Lens for {cohort_label} in {domain_name}! Saved to {out_json}")
+            except Exception as e:
+                print(f"  Error running Logit Lens: {e}")
+                import traceback
+                traceback.print_exc()")
 
 if __name__ == "__main__":
     main()

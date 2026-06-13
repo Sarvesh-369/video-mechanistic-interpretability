@@ -133,21 +133,50 @@ def main():
         # Collect video instances
         instances = []
         if is_single_video:
-            instances.append(get_associated_files(target_path))
+            instances.append((get_associated_files(target_path), "single_video"))
             print(f"\nTargeting single video in domain '{domain_name}': {target_path}")
         else:
-            instances = find_video_files(target_path)
-            print(f"\nTargeting cohort directory for domain '{domain_name}': {target_path} (Found {len(instances)} videos)")
-            instances = instances[:10]
+            all_instances = find_video_files(target_path)
+            print(f"\nTargeting cohort directory for domain '{domain_name}': {target_path} (Found {len(all_instances)} videos)")
+            
+            # Select Cohorts A, B, and C:
+            # Cohort A (Easy): N <= 3, f <= 1.0
+            cohort_A = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            # Cohort B (Trap): N >= 5, f <= 1.0
+            cohort_B = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] <= 1.0]
+            # Cohort C (High-Freq): N >= 5, f >= 3.0
+            cohort_C = [inst for inst in all_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5 and inst["metadata"]["frequency"] is not None and inst["metadata"]["frequency"] >= 3.0]
+            
+            import random
+            # Shuffle deterministically to get diverse seeds
+            random.Random(42).shuffle(cohort_A)
+            random.Random(42).shuffle(cohort_B)
+            random.Random(42).shuffle(cohort_C)
+            
+            # Select up to 4 representative videos from each cohort
+            selected_cohort_A = cohort_A[:4]
+            selected_cohort_B = cohort_B[:4]
+            selected_cohort_C = cohort_C[:4]
+            
+            for inst in selected_cohort_A:
+                instances.append((inst, "cohort_A"))
+            for inst in selected_cohort_B:
+                instances.append((inst, "cohort_B"))
+            for inst in selected_cohort_C:
+                instances.append((inst, "cohort_C"))
+            
+            print(f"  Selected {len(selected_cohort_A)} videos for Cohort A (Easy)")
+            print(f"  Selected {len(selected_cohort_B)} videos for Cohort B (Trap)")
+            print(f"  Selected {len(selected_cohort_C)} videos for Cohort C (High-Freq)")
             
         all_metrics = []
         
-        for idx, inst in enumerate(instances):
+        for idx, (inst, cohort_label) in enumerate(instances):
             video_path = inst["video_path"]
             q_path = inst["question_path"]
             metadata = inst["metadata"]
             
-            print(f"  Processing [{idx+1}/{len(instances)}]: {os.path.basename(video_path)}")
+            print(f"  Processing [{idx+1}/{len(instances)}] ({cohort_label}): {os.path.basename(video_path)}")
             
             if not q_path:
                 question_text = "How many times did the object flash? Show your reasoning and put the final answer in \\boxed{}"
@@ -166,9 +195,10 @@ def main():
                 metrics = compute_trajectory_metrics(trajectory)
                 metrics["metadata"] = metadata
                 metrics["video_name"] = os.path.basename(video_path)
+                metrics["cohort"] = cohort_label
                 
-                # Save visual plots for each video
-                out_img = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_repr.png")
+                # Save visual plots for each video with cohort label in filename
+                out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_repr.png")
                 plot_representation_analysis(metrics, out_img)
                 
                 all_metrics.append(metrics)
