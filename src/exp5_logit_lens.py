@@ -1,6 +1,7 @@
 import os
 import argparse
 import json
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 from src.utils.model_helpers import load_model_and_processor, prepare_video_inputs, get_associated_files, find_video_files
