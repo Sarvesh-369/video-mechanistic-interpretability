@@ -204,6 +204,7 @@ def main():
                             "error": str(e),
                             "correct": False
                         }
+                        del e
                     finally:
                         if "inputs" in locals() and inputs is not None:
                             for k in list(inputs.keys()):

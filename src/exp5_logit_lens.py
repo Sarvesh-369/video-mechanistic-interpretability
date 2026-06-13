@@ -234,6 +234,7 @@ def main():
                     print(f"  Error running Logit Lens: {e}")
                     import traceback
                     traceback.print_exc()
+                    del e
                 finally:
                     # Aggressive cleanup of input and generation tensors
                     if "inputs" in locals() and inputs is not None:

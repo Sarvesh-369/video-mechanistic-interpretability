@@ -263,6 +263,7 @@ def main():
                     all_metrics.append(metrics)
                 except Exception as e:
                     print(f"    Error processing {video_path}: {e}")
+                    del e
                 finally:
                     # Aggressive cleanup of input and generation tensors
                     if "inputs" in locals() and inputs is not None:

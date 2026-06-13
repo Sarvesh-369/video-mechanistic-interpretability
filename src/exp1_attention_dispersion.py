@@ -316,7 +316,7 @@ def main():
                         raw_question = f.read().strip()
                         
                 question_text = format_prompt_by_mode(raw_question, prompt_mode)
-                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
+                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=1.0)
                 
                 try:
                     results = extract_temporal_attention(model, inputs, processor, query_token_pos=-1)
@@ -341,6 +341,7 @@ def main():
                     all_results.append(results)
                 except Exception as e:
                     print(f"    Error processing {video_path}: {e}")
+                    del e
                 finally:
                     # Aggressive cleanup of input and generation tensors
                     if "inputs" in locals() and inputs is not None:
