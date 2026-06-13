@@ -49,120 +49,129 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
     # This prevents storing 40 layers of (seq_len, seq_len) attention matrices in GPU memory.
     captured_attentions = {}
     hooks = []
+    outputs = None
     
-    def get_hook_fn(layer_idx):
-        def hook_fn(module, input_args, output):
-            # output is a tuple: (attn_output, attn_weights, present_key_value)
-            # or (attn_output, attn_weights) depending on config
-            if isinstance(output, tuple) and len(output) > 1 and output[1] is not None:
-                attn_weights = output[1]
-                # Slice: shape (batch_size, num_heads, seq_len, seq_len) -> (batch_size, num_heads, num_vision_tokens)
-                sliced = attn_weights[:, :, query_token_pos, start_idx:end_idx].clone().cpu()
-                captured_attentions[layer_idx] = sliced
-                
-                # Replace the huge tensor with a small dummy tensor to free VRAM
-                new_output = list(output)
-                new_output[1] = torch.zeros(1, 1, 1, 1, device=attn_weights.device, dtype=attn_weights.dtype)
-                return tuple(new_output)
-            return output
-        return hook_fn
-
-    # Find attention layers dynamically
-    attn_modules = []
-    if hasattr(model, "model") and hasattr(model.model, "layers"):
-        layers = model.model.layers
-    elif hasattr(model, "layers"):
-        layers = model.layers
-    else:
-        layers = None
-        
-    if layers is not None:
-        for idx, layer in enumerate(layers):
-            if hasattr(layer, "self_attn"):
-                attn_modules.append((idx, layer.self_attn))
-    else:
-        # Fallback recursive search
-        idx = 0
-        for name, module in model.named_modules():
-            if name.endswith(".self_attn"):
-                attn_modules.append((idx, module))
-                idx += 1
-                
-    for layer_idx, module in attn_modules:
-        hook = module.register_forward_hook(get_hook_fn(layer_idx))
-        hooks.append(hook)
-        
     try:
-        with torch.no_grad():
-            outputs = model(**inputs, output_attentions=True)
-    finally:
-        # Ensure hooks are always removed
-        for hook in hooks:
-            hook.remove()
+        def get_hook_fn(layer_idx):
+            def hook_fn(module, input_args, output):
+                # output is a tuple: (attn_output, attn_weights, present_key_value)
+                # or (attn_output, attn_weights) depending on config
+                if isinstance(output, tuple) and len(output) > 1 and output[1] is not None:
+                    attn_weights = output[1]
+                    # Slice: shape (batch_size, num_heads, seq_len, seq_len) -> (batch_size, num_heads, num_vision_tokens)
+                    sliced = attn_weights[:, :, query_token_pos, start_idx:end_idx].clone().cpu()
+                    captured_attentions[layer_idx] = sliced
+                    
+                    # Replace the huge tensor with a small dummy tensor to free VRAM
+                    new_output = list(output)
+                    new_output[1] = torch.zeros(1, 1, 1, 1, device=attn_weights.device, dtype=attn_weights.dtype)
+                    return tuple(new_output)
+                return output
+            return hook_fn
+
+        # Find attention layers dynamically
+        attn_modules = []
+        if hasattr(model, "model") and hasattr(model.model, "layers"):
+            layers = model.model.layers
+        elif hasattr(model, "layers"):
+            layers = model.layers
+        else:
+            layers = None
             
-    num_layers = len(attn_modules) if len(attn_modules) > 0 else model.config.num_hidden_layers
-    num_heads = model.config.num_attention_heads
-    
-    layer_entropies = []
-    layer_attentions = []
-    
-    for layer in range(num_layers):
-        if layer not in captured_attentions:
-            raise RuntimeError(f"Attention weights for layer {layer} were not captured by hooks.")
+        if layers is not None:
+            for idx, layer in enumerate(layers):
+                if hasattr(layer, "self_attn"):
+                    attn_modules.append((idx, layer.self_attn))
+        else:
+            # Fallback recursive search
+            idx = 0
+            for name, module in model.named_modules():
+                if name.endswith(".self_attn"):
+                    attn_modules.append((idx, module))
+                    idx += 1
+                    
+        for layer_idx, module in attn_modules:
+            hook = module.register_forward_hook(get_hook_fn(layer_idx))
+            hooks.append(hook)
             
-        # shape: (num_heads, num_vision_tokens)
-        sliced_attn = captured_attentions[layer][0].float().numpy()
-        
-        head_entropies = []
-        head_attns = []
-        
-        for head in range(num_heads):
-            query_to_vision = sliced_attn[head]
-            
-            temporal_attn = np.zeros(T)
-            patches_per_frame = H * W
-            
-            for t in range(T):
-                start_p = t * patches_per_frame
-                end_p = (t + 1) * patches_per_frame
-                if end_p <= len(query_to_vision):
-                    temporal_attn[t] = np.sum(query_to_vision[start_p:end_p])
-            
-            # Normalize
-            sum_val = np.sum(temporal_attn)
-            if sum_val > 0:
-                temporal_attn_norm = temporal_attn / sum_val
-            else:
-                temporal_attn_norm = np.ones(T) / T
+        try:
+            with torch.no_grad():
+                outputs = model(**inputs, output_attentions=True)
+        finally:
+            # Ensure hooks are always removed
+            for hook in hooks:
+                hook.remove()
                 
-            # Compute Shannon entropy
-            eps = 1e-9
-            entropy = -np.sum(temporal_attn_norm * np.log(temporal_attn_norm + eps))
-            
-            head_entropies.append(float(entropy))
-            head_attns.append(temporal_attn_norm.tolist())
-            
-        layer_entropies.append(head_entropies)
-        layer_attentions.append(head_attns)
+        num_layers = len(attn_modules)
         
-    ret = {
-        "num_layers": num_layers,
-        "num_heads": num_heads,
-        "T": int(T),
-        "layer_entropies": layer_entropies, # shape: (layers, heads)
-        "layer_attentions": layer_attentions, # shape: (layers, heads, T)
-        "max_possible_entropy": float(np.log(T))
-    }
-    
-    # Free memory
-    del outputs
-    del captured_attentions
-    import gc
-    gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+        # Safe getter for number of heads dynamically from captured attention shape, with safe configs fallbacks
+        if num_layers > 0 and 0 in captured_attentions:
+            num_heads = captured_attentions[0].shape[1]
+        elif hasattr(model.config, "text_config"):
+            num_heads = getattr(model.config.text_config, "num_attention_heads", 32)
+        else:
+            num_heads = getattr(model.config, "num_attention_heads", 32)
         
-    return ret
+        layer_entropies = []
+        layer_attentions = []
+        
+        for layer in range(num_layers):
+            if layer not in captured_attentions:
+                raise RuntimeError(f"Attention weights for layer {layer} were not captured by hooks.")
+                
+            # shape: (num_heads, num_vision_tokens)
+            sliced_attn = captured_attentions[layer][0].float().numpy()
+            
+            head_entropies = []
+            head_attns = []
+            
+            for head in range(num_heads):
+                query_to_vision = sliced_attn[head]
+                
+                temporal_attn = np.zeros(T)
+                patches_per_frame = H * W
+                
+                for t in range(T):
+                    start_p = t * patches_per_frame
+                    end_p = (t + 1) * patches_per_frame
+                    if end_p <= len(query_to_vision):
+                        temporal_attn[t] = np.sum(query_to_vision[start_p:end_p])
+                
+                # Normalize
+                sum_val = np.sum(temporal_attn)
+                if sum_val > 0:
+                    temporal_attn_norm = temporal_attn / sum_val
+                else:
+                    temporal_attn_norm = np.ones(T) / T
+                    
+                # Compute Shannon entropy
+                eps = 1e-9
+                entropy = -np.sum(temporal_attn_norm * np.log(temporal_attn_norm + eps))
+                
+                head_entropies.append(float(entropy))
+                head_attns.append(temporal_attn_norm.tolist())
+                
+            layer_entropies.append(head_entropies)
+            layer_attentions.append(head_attns)
+            
+        ret = {
+            "num_layers": num_layers,
+            "num_heads": num_heads,
+            "T": int(T),
+            "layer_entropies": layer_entropies, # shape: (layers, heads)
+            "layer_attentions": layer_attentions, # shape: (layers, heads, T)
+            "max_possible_entropy": float(np.log(T))
+        }
+        return ret
+        
+    finally:
+        if outputs is not None:
+            del outputs
+        captured_attentions.clear()
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 def plot_attention_dispersion(results, output_image_path):
