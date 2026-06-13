@@ -16,28 +16,44 @@ from src.utils.model_helpers import (
 
 def compute_trajectory_metrics(trajectory):
     """
-    Computes consecutive frame cosine similarities and trajectory drift.
+    Computes consecutive frame cosine similarities (both raw and mean-centered/correlation) 
+    and trajectory drift.
     """
     T, hidden_dim = trajectory.shape
     
-    # Normalize features
+    # --- 1. Raw Cosine Similarities ---
     norms = np.linalg.norm(trajectory, axis=1, keepdims=True)
     norm_trajectory = trajectory / (norms + 1e-9)
     
-    # Consecutive cosine similarity
     consecutive_sims = []
     for t in range(T - 1):
         sim = np.dot(norm_trajectory[t], norm_trajectory[t+1])
         consecutive_sims.append(float(sim))
         
-    # Similarity to initial state
     init_sims = []
     for t in range(T):
         sim = np.dot(norm_trajectory[t], norm_trajectory[0])
         init_sims.append(float(sim))
         
-    # Apply PCA to project features to 2D trajectory space
-    # (Must have at least 2 steps in T for PCA)
+    # --- 2. Mean-Centered Cosine Similarities (Pearson Correlation) ---
+    # Subtracting the average representation across time removes the static background
+    # and the massive common anisotropy vector (the cone effect).
+    mean_vector = np.mean(trajectory, axis=0)
+    centered_trajectory = trajectory - mean_vector
+    centered_norms = np.linalg.norm(centered_trajectory, axis=1, keepdims=True)
+    norm_centered = centered_trajectory / (centered_norms + 1e-9)
+    
+    centered_consecutive_sims = []
+    for t in range(T - 1):
+        sim = np.dot(norm_centered[t], norm_centered[t+1])
+        centered_consecutive_sims.append(float(sim))
+        
+    centered_init_sims = []
+    for t in range(T):
+        sim = np.dot(norm_centered[t], norm_centered[0])
+        centered_init_sims.append(float(sim))
+        
+    # --- 3. PCA Projecting ---
     if T >= 2:
         pca = PCA(n_components=2)
         trajectory_2d = pca.fit_transform(trajectory)
@@ -49,30 +65,55 @@ def compute_trajectory_metrics(trajectory):
     return {
         "consecutive_sims": consecutive_sims,
         "init_sims": init_sims,
+        "centered_consecutive_sims": centered_consecutive_sims,
+        "centered_init_sims": centered_init_sims,
         "trajectory_2d": trajectory_2d.tolist(),
         "explained_variance": explained_variance
     }
 
 def plot_representation_analysis(metrics, output_image_path):
     """
-    Generates plots of cosine similarity over time and the PCA trajectory path.
+    Generates plots of cosine similarity over time (raw and centered) and the PCA trajectory path.
     """
     consecutive_sims = metrics["consecutive_sims"]
     init_sims = metrics["init_sims"]
+    centered_consecutive_sims = metrics.get("centered_consecutive_sims", [])
+    centered_init_sims = metrics.get("centered_init_sims", [])
     traj_2d = np.array(metrics["trajectory_2d"])
     T = len(init_sims)
     
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
     
     # Plot 1: Cosine Similarity metrics
-    axes[0].plot(range(T - 1), consecutive_sims, label='Consecutive Sim S(t, t+1)', color='purple', marker='o')
-    axes[0].plot(range(T), init_sims, label='Initial Sim S(t, 0)', color='teal', linestyle='--')
-    axes[0].set_xlabel('Temporal Patch Index (t)')
-    axes[0].set_ylabel('Cosine Similarity')
+    # Raw Similarity on primary left y-axis
+    color_raw = 'purple'
+    ax1 = axes[0]
+    ax1.plot(range(T - 1), consecutive_sims, label='Raw Consecutive S(t, t+1)', color=color_raw, marker='o')
+    ax1.plot(range(T), init_sims, label='Raw Initial S(t, 0)', color=color_raw, linestyle='--')
+    ax1.set_xlabel('Temporal Patch Index (t)')
+    ax1.set_ylabel('Raw Cosine Similarity', color=color_raw)
+    ax1.tick_params(axis='y', labelcolor=color_raw)
+    ax1.set_ylim([0.0, 1.05])
+    ax1.grid(True)
+    
+    # Mean-centered correlation on secondary right y-axis
+    if len(centered_consecutive_sims) > 0:
+        color_centered = 'teal'
+        ax2 = ax1.twinx()
+        ax2.plot(range(T - 1), centered_consecutive_sims, label='Centered Consecutive (Correlation)', color=color_centered, marker='s', alpha=0.7)
+        ax2.plot(range(T), centered_init_sims, label='Centered Initial', color=color_centered, linestyle=':', alpha=0.7)
+        ax2.set_ylabel('Mean-Centered Correlation', color=color_centered)
+        ax2.tick_params(axis='y', labelcolor=color_centered)
+        ax2.set_ylim([-1.05, 1.05])
+        
+        # Combine legends
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='lower left', fontsize='small')
+    else:
+        ax1.legend(loc='lower left')
+        
     axes[0].set_title('Representational Similarity Over Time')
-    axes[0].set_ylim([0.0, 1.05])
-    axes[0].legend()
-    axes[0].grid(True)
     
     # Plot 2: 2D PCA state space trajectory
     sc = axes[1].scatter(traj_2d[:, 0], traj_2d[:, 1], c=range(T), cmap='plasma', edgecolor='k', s=50, zorder=3)
@@ -82,8 +123,8 @@ def plot_representation_analysis(metrics, output_image_path):
     axes[1].text(traj_2d[0, 0], traj_2d[0, 1], ' Start', color='green', fontweight='bold')
     axes[1].text(traj_2d[-1, 0], traj_2d[-1, 1], ' End', color='red', fontweight='bold')
     
-    axes[1].set_xlabel('PCA Component 1')
-    axes[1].set_ylabel('PCA Component 2')
+    axes[1].set_xlabel('PCA Component 1 (captures temporal drift)')
+    axes[1].set_ylabel('PCA Component 2 (captures state changes)')
     axes[1].set_title('2D PCA Representation Space Trajectory')
     fig.colorbar(sc, ax=axes[1], label='Time Step (t)')
     axes[1].grid(True)
