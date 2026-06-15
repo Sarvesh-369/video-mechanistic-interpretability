@@ -52,11 +52,17 @@ def prepare_inputs_with_ablation(video_path, question_text, processor, device, c
 def parse_answer(output_text):
     """
     Parses the numeric count out of the LaTeX boxed format like \boxed{5}.
-    Only parses the boxed value.
+    Falls back to looking for a single isolated number in the text if no boxed value is found.
     """
     match = re.search(r'\\boxed\{(\d+)\}', output_text)
     if match:
         return int(match.group(1))
+    
+    # Fallback for direct prompt mode where model often outputs only the number
+    digits = re.findall(r'\b\d+\b', output_text.strip())
+    if len(digits) == 1:
+        return int(digits[0])
+        
     return None
 
 def main():

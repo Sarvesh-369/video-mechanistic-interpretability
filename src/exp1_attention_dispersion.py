@@ -218,6 +218,7 @@ def main():
     parser.add_argument("--output-dir", type=str, default="results/exp1", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     parser.add_argument("--prompt-mode", type=str, default="both", choices=["cot", "direct", "both"], help="Prompting mode (cot, direct, or both)")
+    parser.add_argument("--run-generation", action="store_true", help="Run autoregressive text generation (disabled by default to prevent VRAM OOM in eager mode)")
     args = parser.parse_args()
     
     # Load model and processor once.
@@ -326,13 +327,16 @@ def main():
                     results["prompt"] = question_text
                     
                     # Run text generation to check what the model actually outputs
-                    print("    Generating model's reasoning and count answer...")
-                    with torch.no_grad():
-                        generated_ids = model.generate(**inputs, max_new_tokens=512)
-                        generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
-                        generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-                    results["generated_response"] = generated_text
-                    print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
+                    if args.run_generation:
+                        print("    Generating model's reasoning and count answer...")
+                        with torch.no_grad():
+                            generated_ids = model.generate(**inputs, max_new_tokens=512)
+                            generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
+                            generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                        results["generated_response"] = generated_text
+                        print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
+                    else:
+                        results["generated_response"] = ""
                     
                     # Save visual plots for each video with cohort label in filename
                     out_img = os.path.join(output_dir, f"{cohort_label}_{os.path.splitext(os.path.basename(video_path))[0]}_attn.png")
