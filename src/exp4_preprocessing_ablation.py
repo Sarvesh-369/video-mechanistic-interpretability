@@ -57,12 +57,6 @@ def parse_answer(output_text):
     match = re.search(r'\\boxed\{(\d+)\}', output_text)
     if match:
         return int(match.group(1))
-    
-    # Fallback for direct prompt mode where model often outputs only the number
-    digits = re.findall(r'\b\d+\b', output_text.strip())
-    if len(digits) == 1:
-        return int(digits[0])
-        
     return None
 
 def main():
