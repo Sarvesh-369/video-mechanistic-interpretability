@@ -62,9 +62,13 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
                     sliced = attn_weights[:, :, query_token_pos, start_idx:end_idx].detach().clone().cpu()
                     captured_attentions[layer_idx] = sliced
                     
-                    # Replace the huge tensor with a small dummy tensor to free VRAM
+                    # In-place release of the massive attention tensor storage to bypass any PyTorch C++ reference leaks
+                    dummy = torch.zeros(1, 1, 1, 1, device=attn_weights.device, dtype=attn_weights.dtype)
+                    attn_weights.set_(dummy)
+                    
+                    # Replace the huge tensor with a small dummy tensor in the returned tuple
                     new_output = list(output)
-                    new_output[1] = torch.zeros(1, 1, 1, 1, device=attn_weights.device, dtype=attn_weights.dtype)
+                    new_output[1] = dummy
                     return tuple(new_output)
                 return output
             return hook_fn
