@@ -60,6 +60,8 @@ def extract_temporal_attention(model, inputs, processor, query_token_pos=-1):
                     attn_weights = output[1]
                     # Slice: shape (batch_size, num_heads, seq_len, seq_len) -> (batch_size, num_heads, num_vision_tokens)
                     sliced = attn_weights[:, :, query_token_pos, start_idx:end_idx].detach().clone().cpu()
+                    if torch.cuda.is_available():
+                        torch.cuda.synchronize()
                     captured_attentions[layer_idx] = sliced
                     
                     # In-place release of the massive attention tensor storage to bypass any PyTorch C++ reference leaks
