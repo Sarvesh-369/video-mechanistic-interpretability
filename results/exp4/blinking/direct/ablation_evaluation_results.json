@@ -1,0 +1,340 @@
+{
+  "config_accuracies": {
+    "Baseline": 0.0,
+    "High_Temporal_Resolution": 0.0,
+    "High_Spatial_Resolution": 0.0,
+    "High_Temporal_And_Spatial": 0.0
+  },
+  "details": [
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s0_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 0,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s1_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 1,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s2_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 2,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "5",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s3_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 3,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "2",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "2",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s4_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 4,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "5",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s5_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 5,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "2",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s6_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 6,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "2",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "2",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s7_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 7,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s8_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 8,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "5",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "3",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "6",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_count_blinks_c4_f0.5_s9_d24.0_count_blinks.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 9,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many times did the object flash? Answer with a single numeric count only inside \\boxed{} with no other text.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "4",
+          "parsed_count": null,
+          "correct": false
+        }
+      }
+    }
+  ]
+}

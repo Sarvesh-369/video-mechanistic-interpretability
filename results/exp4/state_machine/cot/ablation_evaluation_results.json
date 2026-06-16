@@ -1,0 +1,340 @@
+{
+  "config_accuracies": {
+    "Baseline": 0.8,
+    "High_Temporal_Resolution": 0.7,
+    "High_Spatial_Resolution": 0.6,
+    "High_Temporal_And_Spatial": 0.7
+  },
+  "details": [
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s0_d24.0_total_transitions_s45212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 0,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At **0.0 seconds**, the circle is **orange**.\n- At **0.1 seconds**, the circle is still **orange**.\n- At **0.2 seconds**, the circle changes to **lighter orange (or tan)**.\n- At **0.3 seconds**, the circle is back to **orange**.\n- At **0.4 seconds**, the circle is still **orange**.\n- At **0.5 seconds**, the circle changes to **lighter orange (or tan)** again.\n- At **0.6 seconds**, the circle is back to **orange**.\n- At **0.7 seconds**, the circle is still **orange**.\n- At **0.8 seconds**, the circle changes to **lighter orange (or tan)** once more.\n- At **0.9 seconds**, the circle is back to **orange**.\n- At **1.0 seconds**, the circle is still **orange**.\n- At **1.1 seconds**, the circle is still **orange**.\n- At **1.2 seconds**, the circle is still **orange**.\n- At **1.3 seconds**, the circle is still **orange**.\n- At **1.4 seconds**, the circle is still **orange**.\n- At **1.5 seconds**, the circle is still **orange**.\n- At **1.6 seconds**, the circle is still **orange**.\n- At **1.7 seconds**, the circle is still **orange**.\n- At **1.8 seconds**, the circle is still **orange**.\n- At **1.9 seconds**, the circle is still **orange**.\n\nNow, let's count the actual color changes:\n\n1. **0.2 seconds** \u2192 from orange to lighter orange (tan).\n2. **0.5 seconds** \u2192 from orange to lighter orange (tan).\n3. **0.8 seconds** \u2192 from orange to lighter orange (tan).\n\nEach of these is a distinct color change.\n\nTherefore, the total number of color changes is **3**.\n\n\\boxed{3}",
+          "parsed_count": 3,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video shows a single orange circle on a black background. The circle changes color between orange and a lighter, more yellowish-orange tone multiple times.\n\nLet\u2019s list the color changes by time:\n\n- **0.0 - 0.4 seconds**: The circle is orange.\n- **0.5 - 0.6 seconds**: The circle changes to a lighter, yellowish-orange color. \u2192 **First color change**.\n- **0.7 - 0.8 seconds**: The circle changes back to orange. \u2192 **Second color change**.\n- **0.9 - 1.0 seconds**: The circle is orange.\n- **1.1 - 1.3 seconds**: The circle changes to the lighter, yellowish-orange color. \u2192 **Third color change**.\n- **1.4 - 1.5 seconds**: The circle changes back to orange. \u2192 **Fourth color change**.\n- **1.6 - 2.0 seconds**: The circle is orange.\n- **2.1 - 2.4 seconds**: The circle is orange.\n- **2.5 - 2.9 seconds**: The circle is orange.\n- **3.0 - 3.9 seconds**: The circle is orange.\n\nSo, the color changes occur at:\n- 0.5 seconds (first change)\n- 0.7 seconds (second change)\n- 1.1 seconds (third change)\n- 1.4 seconds (fourth change)\n\nThere are **4 color changes** in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video shows a single orange circle on a black background. The circle's color appears to flicker or pulse between orange and a lighter, more yellowish-orange shade.\n\nHere\u2019s the sequence of color changes based on the timestamps provided:\n\n- At 0.0 seconds: The circle is orange.\n- At 0.1 seconds: The circle is still orange.\n- At 0.2 seconds: The circle changes to a lighter, yellowish-orange.\n- At 0.3 seconds: The circle changes back to orange.\n- At 0.4 seconds: The circle changes to a lighter, yellowish-orange.\n- At 0.5 seconds: The circle changes back to orange.\n- At 0.6 seconds: The circle changes to a lighter, yellowish-orange.\n- At 0.7 seconds: The circle changes back to orange.\n- At 0.8 seconds: The circle changes to a lighter, yellowish-orange.\n- At 0.9 seconds: The circle changes back to orange.\n- At 1.0 seconds: The circle is orange.\n- At 1.1 seconds: The circle is orange.\n- At 1.2 seconds: The circle is orange.\n- At 1.3 seconds: The circle is orange.\n- At 1.4 seconds: The circle is orange.\n- At 1.5 seconds: The circle is orange.\n- At 1.6 seconds: The circle is orange.\n- At 1.7 seconds: The circle is orange.\n- At 1.8 seconds: The circle is orange.\n- At 1.9 seconds: The circle is orange.\n\nNow, let's count the number of times the color changes:\n\n1. 0.2 seconds \u2192 lighter orange (1st change)\n2. 0.3 seconds \u2192 orange (2nd change)\n3. 0.4 seconds \u2192 lighter orange (3rd change)\n4. 0.5 seconds \u2192 orange (4th change)\n5. 0.6 seconds \u2192 lighter orange (5th change)\n6. 0.7 seconds \u2192 orange (6th change)\n7. 0.8 seconds \u2192 lighter orange (7th change)\n8. 0.9 seconds \u2192 orange (8th change)\n\nAfter 0.9 seconds, the circle remains orange until the end of the video (1.9 seconds). There are no further changes.\n\nTherefore, there are 8 color changes in total.\n\n\\boxed{8}",
+          "parsed_count": 8,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video consists of a single orange circle on a black background. The color of the circle changes between orange and a lighter, more yellowish-orange tone. Let\u2019s look at the timestamps:\n\n- At 0.0 seconds: The circle is orange.\n- At 0.1 seconds: The circle is still orange.\n- At 0.2 seconds: The circle is still orange.\n- At 0.3 seconds: The circle is still orange.\n- At 0.4 seconds: The circle changes to a lighter, yellowish-orange color.\n- At 0.5 seconds: The circle is still the lighter color.\n- At 0.6 seconds: The circle is still the lighter color.\n- At 0.7 seconds: The circle changes back to orange.\n- At 0.8 seconds: The circle is still orange.\n- At 0.9 seconds: The circle is still orange.\n- At 1.0 seconds: The circle changes to the lighter color again.\n- At 1.1 seconds: The circle is still the lighter color.\n- At 1.2 seconds: The circle is still the lighter color.\n- At 1.3 seconds: The circle changes back to orange.\n- At 1.4 seconds: The circle is still orange.\n- At 1.5 seconds: The circle is still orange.\n- At 1.6 seconds: The circle is still orange.\n- At 1.7 seconds: The circle is still orange.\n- At 1.8 seconds: The circle is still orange.\n- At 1.9 seconds: The circle is still orange.\n- At 2.0 seconds: The circle is still orange.\n- At 2.1 seconds: The circle is still orange.\n- At 2.2 seconds: The circle is still orange.\n- At 2.3 seconds: The circle is still orange.\n- At 2.4 seconds: The circle is still orange.\n- At 2.5 seconds: The circle is still orange.\n- At 2.6 seconds: The circle is still orange.\n- At 2.7 seconds: The circle is still orange.\n- At 2.8 seconds: The circle is still orange.\n- At 2.9 seconds: The circle is still orange.\n- At 3.0 seconds: The circle is still orange.\n- At 3.1 seconds: The circle is still orange.\n- At 3.2 seconds: The circle is still orange.\n- At 3.3 seconds: The circle is still orange.\n- At 3.4 seconds: The circle is still orange.\n- At 3.5 seconds: The circle is still orange.\n- At 3.6 seconds: The circle is still orange.\n- At 3.7 seconds: The circle is still orange.\n- At 3.8 seconds: The circle is still orange.\n- At 3.9 seconds: The circle is still orange.\n\nNow, let\u2019s count the transitions:\n\n1. At 0.4 seconds: Orange \u2192 Lighter orange (1st change)\n2. At 0.7 seconds: Lighter orange \u2192 Orange (2nd change)\n3. At 1.0 seconds: Orange \u2192 Lighter orange (3rd change)\n4. At 1.3 seconds: Lighter orange \u2192 Orange (4th change)\n\nThere are no other color changes in the rest of the video.\n\nTherefore, the total number of color changes is 4.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s1_d24.0_total_transitions_s46212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 1,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video starts at 0.0 seconds with a **teal** circle.\n\n- At 0.0 seconds: teal\n- At 0.1 seconds: still teal (no change)\n- At 0.2 seconds: changes to **orange**\n  \u2192 This is the **first color change**.\n- At 0.3 seconds: still orange (no change)\n- At 0.4 seconds: changes back to **teal**\n  \u2192 This is the **second color change**.\n- At 0.5 seconds: still teal (no change)\n- At 0.6 seconds: changes to **pink**\n  \u2192 This is the **third color change**.\n- At 0.7 seconds: still pink (no change)\n- At 0.8 seconds: changes back to **teal**\n  \u2192 This is the **fourth color change**.\n- At 0.9 seconds: still teal (no change)\n- At 1.0 seconds: still teal (no change)\n- At 1.1 seconds: still teal (no change)\n- At 1.2 seconds: still teal (no change)\n- At 1.3 seconds: still teal (no change)\n- At 1.4 seconds: still teal (no change)\n- At 1.5 seconds: still teal (no change)\n- At 1.6 seconds: still teal (no change)\n- At 1.7 seconds: still teal (no change)\n- At 1.8 seconds: still teal (no change)\n- At 1.9 seconds: still teal (no change)\n\nThe color changes occurred at:\n1. 0.2 seconds (teal \u2192 orange)\n2. 0.4 seconds (orange \u2192 teal)\n3. 0.6 seconds (teal \u2192 pink)\n4. 0.8 seconds (pink \u2192 teal)\n\nThere are **4** color changes in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. **At 0.0 seconds**: The circle is teal (a greenish-blue color).\n2. **At 0.1 seconds**: The circle is still teal.\n3. **At 0.2 seconds**: The circle is still teal.\n4. **At 0.3 seconds**: The circle is still teal.\n5. **At 0.4 seconds**: The circle is still teal.\n6. **At 0.5 seconds**: The circle changes to orange. \u2192 **First color change**.\n7. **At 0.6 seconds**: The circle is still orange.\n8. **At 0.7 seconds**: The circle is still orange.\n9. **At 0.8 seconds**: The circle changes to gold (yellowish-brown). \u2192 **Second color change**.\n10. **At 0.9 seconds**: The circle changes back to teal. \u2192 **Third color change**.\n11. **At 1.0 seconds**: The circle changes to blue. \u2192 **Fourth color change**.\n12. **At 1.1 seconds**: The circle is still blue.\n13. **At 1.2 seconds**: The circle changes to magenta (pinkish-purple). \u2192 **Fifth color change**.\n14. **At 1.3 seconds**: The circle is still magenta.\n15. **At 1.4 seconds**: The circle changes to purple. \u2192 **Sixth color change**.\n16. **At 1.5 seconds**: The circle changes back to teal. \u2192 **Seventh color change**.\n17. **At 1.6 seconds**: The circle is still teal.\n18. **At 1.7 seconds**: The circle is still teal.\n19. **At 1.8 seconds**: The circle is still teal.\n20. **At 1.9 seconds**: The circle is still teal.\n21. **At 2.0 seconds**: The circle is still teal.\n22. **At 2.1 seconds**: The circle is still teal.\n23. **At 2.2 seconds**: The circle is still teal.\n24. **At 2.3 seconds**: The circle is still teal.\n25. **At 2.4 seconds**: The circle is still teal.\n26. **At 2.5 seconds**: The circle is still teal.\n27. **At 2.6 seconds**: The circle is still teal.\n28. **At 2.7 seconds**: The circle is still teal.\n29. **At 2.8 seconds**: The circle is still teal.\n30. **At 2.9 seconds**: The circle is still teal.\n31. **At 3.0 seconds**: The circle is still teal.\n32. **At 3.1 seconds**: The circle is still teal.\n33. **At 3.2 seconds**: The circle is still teal.\n34. **At 3.3 seconds**: The circle is still teal.\n35. **At 3.4 seconds**: The circle is still teal.\n36. **At 3.5 seconds**: The circle is still teal.\n37. **At 3.6 seconds**: The circle is still teal.\n38. **At 3.7 seconds**: The circle is still teal.\n39. **At 3.8 seconds**: The circle is still teal.\n40. **At 3.9 seconds**: The circle is still teal.\n\nNow, let\u2019s list the color changes explicitly:\n\n- **0.5 seconds**: teal \u2192 orange\n- **0.8 seconds**: orange \u2192 gold\n- **0.9 seconds**: gold \u2192 teal\n- **1.0 seconds**: teal \u2192 blue\n- **1.2 seconds**: blue \u2192 magenta\n- **1.4 seconds**: magenta \u2192 purple\n- **1.5 seconds**: purple \u2192 teal\n\nThat\u2019s **7 color changes**.\n\nFinal answer: $\\boxed{7}$",
+          "parsed_count": 7,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a **teal** circle.\n\n- At 0.0 seconds: teal\n- At 0.1 seconds: still teal (no change)\n- At 0.2 seconds: changes to **orange**\n  \u2192 This is the **first color change**.\n- At 0.3 seconds: still orange (no change)\n- At 0.4 seconds: changes back to **teal**\n  \u2192 This is the **second color change**.\n- At 0.5 seconds: still teal (no change)\n- At 0.6 seconds: changes to **pink**\n  \u2192 This is the **third color change**.\n- At 0.7 seconds: still pink (no change)\n- At 0.8 seconds: changes back to **teal**\n  \u2192 This is the **fourth color change**.\n- At 0.9 seconds: still teal (no change)\n- At 1.0 seconds: still teal (no change)\n- At 1.1 seconds: still teal (no change)\n- At 1.2 seconds: still teal (no change)\n- At 1.3 seconds: still teal (no change)\n- At 1.4 seconds: still teal (no change)\n- At 1.5 seconds: still teal (no change)\n- At 1.6 seconds: still teal (no change)\n- At 1.7 seconds: still teal (no change)\n- At 1.8 seconds: still teal (no change)\n- At 1.9 seconds: still teal (no change)\n\nThe color changes occurred at:\n1. 0.2 seconds (teal \u2192 orange)\n2. 0.4 seconds (orange \u2192 teal)\n3. 0.6 seconds (teal \u2192 pink)\n4. 0.8 seconds (pink \u2192 teal)\n\nNo further changes occur.\n\nTherefore, the total number of color changes is **4**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video frames are as follows:\n\n- **0.0 - 0.4 seconds**: The circle is **teal** (greenish-blue).\n- **0.5 - 0.8 seconds**: The circle changes to **orange**.\n- **0.9 - 1.0 seconds**: The circle changes back to **teal**.\n- **1.1 - 1.4 seconds**: The circle changes to **pink**.\n- **1.5 - 3.9 seconds**: The circle is back to **teal** and stays there.\n\nNow, let\u2019s count the **color changes**:\n\n1. **Teal \u2192 Orange** (at 0.5 seconds) \u2192 **1st change**\n2. **Orange \u2192 Teal** (at 0.9 seconds) \u2192 **2nd change**\n3. **Teal \u2192 Pink** (at 1.1 seconds) \u2192 **3rd change**\n4. **Pink \u2192 Teal** (at 1.5 seconds) \u2192 **4th change**\n\nAfter that, the circle remains teal until the end.\n\nTherefore, there are **4 color changes** in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s2_d24.0_total_transitions_s47212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 2,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At 0.0 seconds, the circle is pink.\n2. At 0.1 seconds, the circle is still pink.\n3. At 0.2 seconds, the circle changes to orange.\n   \u2192 This is the first color change (pink \u2192 orange).\n4. At 0.3 seconds, the circle is still orange.\n5. At 0.4 seconds, the circle changes back to pink.\n   \u2192 This is the second color change (orange \u2192 pink).\n6. At 0.5 seconds, the circle is still pink.\n7. At 0.6 seconds, the circle changes to orange.\n   \u2192 This is the third color change (pink \u2192 orange).\n8. At 0.7 seconds, the circle is still orange.\n9. At 0.8 seconds, the circle changes back to pink.\n   \u2192 This is the fourth color change (orange \u2192 pink).\n10. At 0.9 seconds, the circle is still pink.\n11. At 1.0 seconds, the circle is still pink.\n12. At 1.1 seconds, the circle is still pink.\n13. At 1.2 seconds, the circle is still pink.\n14. At 1.3 seconds, the circle is still pink.\n15. At 1.4 seconds, the circle is still pink.\n16. At 1.5 seconds, the circle is still pink.\n17. At 1.6 seconds, the circle is still pink.\n18. At 1.7 seconds, the circle is still pink.\n19. At 1.8 seconds, the circle is still pink.\n20. At 1.9 seconds, the circle is still pink.\n\nThe color changes occur at:\n- 0.2 seconds (pink \u2192 orange)\n- 0.4 seconds (orange \u2192 pink)\n- 0.6 seconds (pink \u2192 orange)\n- 0.8 seconds (orange \u2192 pink)\n\nThat\u2019s a total of 4 color changes.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\n### Step 1: Initial state (0.0 seconds)\n- The circle is **pink/magenta**.\n\n### Step 2: 0.1 - 0.4 seconds\n- The circle remains **pink/magenta**.\n- No change.\n\n### Step 3: 0.5 seconds\n- The circle changes to **orange**. \u2192 **First color change**.\n\n### Step 4: 0.6 - 0.8 seconds\n- The circle remains **orange**.\n- No change.\n\n### Step 5: 0.9 seconds\n- The circle changes to **pink/magenta**. \u2192 **Second color change**.\n\n### Step 6: 1.0 - 1.2 seconds\n- The circle remains **pink/magenta**.\n- No change.\n\n### Step 7: 1.3 seconds\n- The circle changes to **orange**. \u2192 **Third color change**.\n\n### Step 8: 1.4 - 1.5 seconds\n- The circle remains **orange**.\n- No change.\n\n### Step 9: 1.6 seconds\n- The circle changes to **pink/magenta**. \u2192 **Fourth color change**.\n\n### Step 10: 1.7 - 3.9 seconds\n- The circle remains **pink/magenta**.\n- No change.\n\n### Total Color Changes:\nWe have 4 distinct color changes:\n1. Pink \u2192 Orange (at 0.5 seconds)\n2. Orange \u2192 Pink (at 0.9 seconds)\n3. Pink \u2192 Orange (at 1.3 seconds)\n4. Orange \u2192 Pink (at 1.6 seconds)\n\n### Final Answer:\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video starts at 0.0 seconds with a **pink** circle.\n\n- At 0.0 seconds: The circle is **pink**.\n- At 0.1 seconds: The circle is still **pink** (no change).\n- At 0.2 seconds: The circle changes to **orange**. \u2192 **First color change**.\n- At 0.3 seconds: The circle is still **orange** (no change).\n- At 0.4 seconds: The circle changes back to **pink**. \u2192 **Second color change**.\n- At 0.5 seconds: The circle is still **pink** (no change).\n- At 0.6 seconds: The circle changes to **orange**. \u2192 **Third color change**.\n- At 0.7 seconds: The circle is still **orange** (no change).\n- At 0.8 seconds: The circle changes back to **pink**. \u2192 **Fourth color change**.\n- At 0.9 seconds: The circle is still **pink** (no change).\n- At 1.0 seconds: The circle is still **pink** (no change).\n- At 1.1 seconds: The circle is still **pink** (no change).\n- At 1.2 seconds: The circle is still **pink** (no change).\n- At 1.3 seconds: The circle is still **pink** (no change).\n- At 1.4 seconds: The circle is still **pink** (no change).\n- At 1.5 seconds: The circle is still **pink** (no change).\n- At 1.6 seconds: The circle is still **pink** (no change).\n- At 1.7 seconds: The circle is still **pink** (no change).\n- At 1.8 seconds: The circle is still **pink** (no change).\n- At 1.9 seconds: The circle is still **pink** (no change).\n\nSo, the color changes occurred at:\n- 0.2 seconds (pink \u2192 orange)\n- 0.4 seconds (orange \u2192 pink)\n- 0.6 seconds (pink \u2192 orange)\n- 0.8 seconds (orange \u2192 pink)\n\nThat\u2019s a total of **4 color changes**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\n### Step 1: Initial frame (0.0 seconds)\n- The circle is **pink** (or magenta).\n\n### Step 2: Frame at 0.5 seconds\n- The circle changes to **orange**. \u2192 **First color change**.\n\n### Step 3: Frame at 0.8 seconds\n- The circle changes to **pink** (or magenta). \u2192 **Second color change**.\n\n### Step 4: Frame at 1.2 seconds\n- The circle changes to **orange**. \u2192 **Third color change**.\n\n### Step 5: Frame at 1.5 seconds\n- The circle changes to **pink** (or magenta). \u2192 **Fourth color change**.\n\n### Step 6: Frame at 1.9 seconds\n- The circle remains **pink** (or magenta) and stays that color until the end.\n\n### Summary of color changes:\n- 0.0s \u2192 0.5s: pink \u2192 orange\n- 0.5s \u2192 0.8s: orange \u2192 pink\n- 0.8s \u2192 1.2s: pink \u2192 orange\n- 1.2s \u2192 1.5s: orange \u2192 pink\n\nAfter 1.5s, the circle remains pink and does not change again.\n\n### Total color changes:\nThere are **4** color changes in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s3_d24.0_total_transitions_s48212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 3,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At **0.0 seconds**, the circle is **pink**.\n- At **0.1 seconds**, the circle is still **pink** (no change).\n- At **0.2 seconds**, the circle changes to **green** \u2192 **1st color change**.\n- At **0.3 seconds**, the circle changes to **yellowish-orange** \u2192 **2nd color change**.\n- At **0.4 seconds**, the circle changes to **red** \u2192 **3rd color change**.\n- At **0.5 seconds**, the circle changes to **orange** \u2192 **4th color change**.\n- At **0.6 seconds**, the circle changes to **teal** \u2192 **5th color change**.\n- At **0.7 seconds**, the circle changes to **light grayish-green** \u2192 **6th color change**.\n- At **0.8 seconds**, the circle changes back to **red** \u2192 **7th color change**.\n- From **0.9 seconds to 1.9 seconds**, the circle remains **red** (no change).\n\nSo, the color changes occur at the following timestamps:\n- 0.2 seconds (pink \u2192 green)\n- 0.3 seconds (green \u2192 yellowish-orange)\n- 0.4 seconds (yellowish-orange \u2192 red)\n- 0.5 seconds (red \u2192 orange)\n- 0.6 seconds (orange \u2192 teal)\n- 0.7 seconds (teal \u2192 light grayish-green)\n- 0.8 seconds (light grayish-green \u2192 red)\n\nThat\u2019s a total of **7** color changes.\n\n\\boxed{7}",
+          "parsed_count": 7,
+          "correct": false
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video starts at 0.0 seconds with a **pink** circle.\n\n- At 0.0 seconds: Pink\n- At 0.4 seconds: Changes to **green**\n- At 0.7 seconds: Changes to **gold** (or yellowish-brown)\n- At 0.8 seconds: Changes to **red** (or coral)\n- At 1.1 seconds: Changes to **teal** (or cyan-green)\n- At 1.4 seconds: Changes back to **red** (or coral)\n- At 1.5 seconds: Remains red (no change)\n- At 1.6 seconds: Remains red (no change)\n- At 1.7 seconds: Remains red (no change)\n- At 1.8 seconds: Remains red (no change)\n- At 1.9 seconds: Remains red (no change)\n- At 2.0 seconds: Remains red (no change)\n- At 2.1 seconds: Remains red (no change)\n- At 2.2 seconds: Remains red (no change)\n- At 2.3 seconds: Remains red (no change)\n- At 2.4 seconds: Remains red (no change)\n- At 2.5 seconds: Remains red (no change)\n- At 2.6 seconds: Remains red (no change)\n- At 2.7 seconds: Remains red (no change)\n- At 2.8 seconds: Remains red (no change)\n- At 2.9 seconds: Remains red (no change)\n- At 3.0 seconds: Remains red (no change)\n- At 3.1 seconds: Remains red (no change)\n- At 3.2 seconds: Remains red (no change)\n- At 3.3 seconds: Remains red (no change)\n- At 3.4 seconds: Remains red (no change)\n- At 3.5 seconds: Remains red (no change)\n- At 3.6 seconds: Remains red (no change)\n- At 3.7 seconds: Remains red (no change)\n- At 3.8 seconds: Remains red (no change)\n- At 3.9 seconds: Remains red (no change)\n\nNow, let\u2019s list the distinct color changes:\n\n1. Pink \u2192 Green (at 0.4 seconds)\n2. Green \u2192 Gold (at 0.7 seconds)\n3. Gold \u2192 Red (at 0.8 seconds)\n4. Red \u2192 Teal (at 1.1 seconds)\n5. Teal \u2192 Red (at 1.4 seconds)\n\nThat\u2019s 5 distinct color changes.\n\nNote: Although the circle stays red from 1.5 seconds to 3.9 seconds, we only count the transitions (changes) between colors, not the duration of each color.\n\nTherefore, the total number of color changes is 5.\n\n\\boxed{5}",
+          "parsed_count": 5,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a **pink** circle.\n\n- At 0.0 seconds: The circle is **pink**.\n- At 0.2 seconds: The circle changes to **green** \u2192 **1st color change**.\n- At 0.4 seconds: The circle changes to **orange** \u2192 **2nd color change**.\n- At 0.5 seconds: The circle changes to **brown** \u2192 **3rd color change**.\n- At 0.6 seconds: The circle changes to **teal** \u2192 **4th color change**.\n- At 0.7 seconds: The circle changes to **gray** \u2192 **5th color change**.\n- At 0.8 seconds: The circle changes back to **orange** \u2192 **6th color change**.\n- From 0.9 seconds to 1.9 seconds: The circle remains **orange** \u2192 no change.\n\nSo, we have 6 distinct color changes:\n\n1. Pink \u2192 Green\n2. Green \u2192 Orange\n3. Orange \u2192 Brown\n4. Brown \u2192 Teal\n5. Teal \u2192 Gray\n6. Gray \u2192 Orange\n\nThe circle stays orange for the rest of the video, so no additional changes.\n\nTherefore, the total number of color changes is **6**.\n\n\\boxed{6}",
+          "parsed_count": 6,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. **At 0.0 seconds**: The circle is **pink**.\n2. **At 0.1 seconds**: The circle is still **pink**.\n3. **At 0.2 seconds**: The circle is still **pink**.\n4. **At 0.3 seconds**: The circle is still **pink**.\n5. **At 0.4 seconds**: The circle changes to **green**. \u2192 **First color change**.\n6. **At 0.5 seconds**: The circle is still **green**.\n7. **At 0.6 seconds**: The circle is still **green**.\n8. **At 0.7 seconds**: The circle changes to **yellowish-brown**. \u2192 **Second color change**.\n9. **At 0.8 seconds**: The circle changes to **red**. \u2192 **Third color change**.\n10. **At 0.9 seconds**: The circle is still **red**.\n11. **At 1.0 seconds**: The circle changes to **teal**. \u2192 **Fourth color change**.\n12. **At 1.1 seconds**: The circle is still **teal**.\n13. **At 1.2 seconds**: The circle is still **teal**.\n14. **At 1.3 seconds**: The circle changes back to **red**. \u2192 **Fifth color change**.\n15. **At 1.4 seconds**: The circle is still **red**.\n16. **At 1.5 seconds**: The circle is still **red**.\n17. **At 1.6 seconds**: The circle is still **red**.\n18. **At 1.7 seconds**: The circle is still **red**.\n19. **At 1.8 seconds**: The circle is still **red**.\n20. **At 1.9 seconds**: The circle is still **red**.\n21. **At 2.0 seconds**: The circle is still **red**.\n22. **At 2.1 seconds**: The circle is still **red**.\n23. **At 2.2 seconds**: The circle is still **red**.\n24. **At 2.3 seconds**: The circle is still **red**.\n25. **At 2.4 seconds**: The circle is still **red**.\n26. **At 2.5 seconds**: The circle is still **red**.\n27. **At 2.6 seconds**: The circle is still **red**.\n28. **At 2.7 seconds**: The circle is still **red**.\n29. **At 2.8 seconds**: The circle is still **red**.\n30. **At 2.9 seconds**: The circle is still **red**.\n31. **At 3.0 seconds**: The circle is still **red**.\n32. **At 3.1 seconds**: The circle is still **red**.\n33. **At 3.2 seconds**: The circle is still **red**.\n34. **At 3.3 seconds**: The circle is still **red**.\n35. **At 3.4 seconds**: The circle is still **red**.\n36. **At 3.5 seconds**: The circle is still **red**.\n37. **At 3.6 seconds**: The circle is still **red**.\n38. **At 3.7 seconds**: The circle is still **red**.\n39. **At 3.8 seconds**: The circle is still **red**.\n40. **At 3.9 seconds**: The circle is still **red**.\n\nNow, let\u2019s count the color changes:\n\n- From pink to green \u2192 1\n- From green to yellowish-brown \u2192 2\n- From yellowish-brown to red \u2192 3\n- From red to teal \u2192 4\n- From teal to red \u2192 5\n\nThere are **5** color changes in total.\n\n\\boxed{5}",
+          "parsed_count": 5,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s4_d24.0_total_transitions_s49212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 4,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\n- At **0.0 seconds**, the circle is **green**.\n- At **0.3 seconds**, the circle changes to **pink**. \u2192 This is the **first color change**.\n- At **0.4 seconds**, the circle changes back to **green**. \u2192 This is the **second color change**.\n- At **0.6 seconds**, the circle changes to **orange**. \u2192 This is the **third color change**.\n- At **0.8 seconds**, the circle changes back to **green**. \u2192 This is the **fourth color change**.\n- From **0.9 seconds to 1.9 seconds**, the circle remains **green** and does not change color.\n\nSo, we have 4 distinct color changes:\n1. Green \u2192 Pink\n2. Pink \u2192 Green\n3. Green \u2192 Orange\n4. Orange \u2192 Green\n\nTherefore, the total number of color changes is:\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a green circle.\n\n- At 0.0 seconds: Green circle is present.\n- At 0.1 seconds: Still green.\n- At 0.2 seconds: Still green.\n- At 0.3 seconds: Still green.\n- At 0.4 seconds: The circle changes to a brownish color (this is the first color change).\n- At 0.5 seconds: The circle changes to pink (this is the second color change).\n- At 0.6 seconds: Still pink.\n- At 0.7 seconds: Still pink.\n- At 0.8 seconds: The circle changes to brown (this is the third color change).\n- At 0.9 seconds: The circle changes back to green (this is the fourth color change).\n- At 1.0 seconds: Still green.\n- At 1.1 seconds: The circle changes to yellow (this is the fifth color change).\n- At 1.2 seconds: Still yellow.\n- At 1.3 seconds: Still yellow.\n- At 1.4 seconds: The circle changes to orange (this is the sixth color change).\n- At 1.5 seconds: The circle changes back to green (this is the seventh color change).\n- From 1.6 seconds to 3.9 seconds: The circle remains green.\n\nSo, the color changes occurred at the following timestamps:\n- 0.4 seconds (green \u2192 brown)\n- 0.5 seconds (brown \u2192 pink)\n- 0.8 seconds (pink \u2192 brown)\n- 0.9 seconds (brown \u2192 green)\n- 1.1 seconds (green \u2192 yellow)\n- 1.4 seconds (yellow \u2192 orange)\n- 1.5 seconds (orange \u2192 green)\n\nThat\u2019s a total of 7 color changes.\n\n\\boxed{7}",
+          "parsed_count": 7,
+          "correct": false
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At 0.0 seconds: The circle is green.\n- At 0.1 seconds: The circle is still green (no change).\n- At 0.2 seconds: The circle changes to pink. (1st color change)\n- At 0.3 seconds: The circle changes back to green. (2nd color change)\n- At 0.4 seconds: The circle changes to orange. (3rd color change)\n- At 0.5 seconds: The circle changes back to green. (4th color change)\n- At 0.6 seconds: The circle changes to orange. (5th color change)\n- At 0.7 seconds: The circle changes back to green. (6th color change)\n- From 0.8 seconds to 1.9 seconds: The circle remains green. No further changes.\n\nSo, we have the following color changes:\n1. Green \u2192 Pink\n2. Pink \u2192 Green\n3. Green \u2192 Orange\n4. Orange \u2192 Green\n5. Green \u2192 Orange\n6. Orange \u2192 Green\n\nThat\u2019s a total of **6** color changes.\n\n\\boxed{6}",
+          "parsed_count": 6,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a green circle.\n\n- From 0.0 to 0.4 seconds: The circle is green. No change.\n- At 0.4 seconds: The circle changes to brownish (or tan). This is the **first color change**.\n- From 0.4 to 0.5 seconds: The circle is brownish. No change.\n- At 0.5 seconds: The circle changes to pinkish-red. This is the **second color change**.\n- From 0.5 to 0.8 seconds: The circle is pinkish-red. No change.\n- At 0.8 seconds: The circle changes back to green. This is the **third color change**.\n- From 0.8 to 1.1 seconds: The circle is green. No change.\n- At 1.1 seconds: The circle changes to orange. This is the **fourth color change**.\n- From 1.1 to 1.4 seconds: The circle is orange. No change.\n- At 1.4 seconds: The circle changes back to green. This is the **fifth color change**.\n- From 1.4 to 2.0 seconds: The circle is green. No change.\n- From 2.0 to 3.9 seconds: The circle remains green. No change.\n\nSo, we have 5 distinct color changes:\n\n1. Green \u2192 Brownish (at 0.4 seconds)\n2. Brownish \u2192 Pinkish-red (at 0.5 seconds)\n3. Pinkish-red \u2192 Green (at 0.8 seconds)\n4. Green \u2192 Orange (at 1.1 seconds)\n5. Orange \u2192 Green (at 1.4 seconds)\n\nTherefore, the total number of color changes is 5.\n\n\\boxed{5}",
+          "parsed_count": 5,
+          "correct": false
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s5_d24.0_total_transitions_s50212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 5,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. **At 0.0 seconds**: The circle is **blue**.\n2. **At 0.1 seconds**: The circle is still **blue**. \u2192 No change.\n3. **At 0.2 seconds**: The circle changes to **red**. \u2192 **1st color change**.\n4. **At 0.3 seconds**: The circle is still **red**. \u2192 No change.\n5. **At 0.4 seconds**: The circle changes back to **blue**. \u2192 **2nd color change**.\n6. **At 0.5 seconds**: The circle is still **blue**. \u2192 No change.\n7. **At 0.6 seconds**: The circle changes to **purple**. \u2192 **3rd color change**.\n8. **At 0.7 seconds**: The circle is still **purple**. \u2192 No change.\n9. **At 0.8 seconds**: The circle changes back to **blue**. \u2192 **4th color change**.\n10. **At 0.9 seconds**: The circle is still **blue**. \u2192 No change.\n11. **At 1.0 seconds**: The circle is still **blue**. \u2192 No change.\n12. **At 1.1 seconds**: The circle is still **blue**. \u2192 No change.\n13. **At 1.2 seconds**: The circle is still **blue**. \u2192 No change.\n14. **At 1.3 seconds**: The circle is still **blue**. \u2192 No change.\n15. **At 1.4 seconds**: The circle is still **blue**. \u2192 No change.\n16. **At 1.5 seconds**: The circle is still **blue**. \u2192 No change.\n17. **At 1.6 seconds**: The circle is still **blue**. \u2192 No change.\n18. **At 1.7 seconds**: The circle is still **blue**. \u2192 No change.\n19. **At 1.8 seconds**: The circle is still **blue**. \u2192 No change.\n20. **At 1.9 seconds**: The circle is still **blue**. \u2192 No change.\n\nThe color changes occurred at:\n- 0.2 seconds (blue \u2192 red)\n- 0.4 seconds (red \u2192 blue)\n- 0.6 seconds (blue \u2192 purple)\n- 0.8 seconds (purple \u2192 blue)\n\nThat\u2019s a total of **4 color changes**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At 0.0 seconds, the circle is **blue**.\n2. At 0.5 seconds, the circle changes to **red**. \u2192 This is the **first color change**.\n3. At 0.9 seconds, the circle changes back to **blue**. \u2192 This is the **second color change**.\n4. At 1.2 seconds, the circle changes to **purple**. \u2192 This is the **third color change**.\n5. At 1.5 seconds, the circle changes back to **blue**. \u2192 This is the **fourth color change**.\n6. From 1.6 seconds to 3.9 seconds, the circle remains **blue** and does not change color.\n\nSo, the color changes occurred at:\n- 0.5 seconds (blue \u2192 red)\n- 0.9 seconds (red \u2192 blue)\n- 1.2 seconds (blue \u2192 purple)\n- 1.5 seconds (purple \u2192 blue)\n\nThat\u2019s a total of **4 color changes**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At **0.0 seconds**: The circle is **blue**.\n- At **0.1 seconds**: Still **blue** (no change).\n- At **0.2 seconds**: The circle changes to **red**. \u2192 **First color change**.\n- At **0.3 seconds**: Still **red** (no change).\n- At **0.4 seconds**: Changes back to **blue**. \u2192 **Second color change**.\n- At **0.5 seconds**: Still **blue** (no change).\n- At **0.6 seconds**: Changes to **purple**. \u2192 **Third color change**.\n- At **0.7 seconds**: Still **purple** (no change).\n- At **0.8 seconds**: Changes back to **blue**. \u2192 **Fourth color change**.\n- At **0.9 seconds**: Still **blue** (no change).\n- From **1.0 seconds to 1.9 seconds**: The circle remains **blue** (no changes).\n\nSo, the color changes occurred at:\n1. 0.2 seconds (blue \u2192 red)\n2. 0.4 seconds (red \u2192 blue)\n3. 0.6 seconds (blue \u2192 purple)\n4. 0.8 seconds (purple \u2192 blue)\n\nThat\u2019s a total of **4** color changes.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. **At 0.0 seconds**: The circle is **blue**.\n2. **At 0.5 seconds**: The circle changes to **red**. \u2192 This is the **first color change**.\n3. **At 0.9 seconds**: The circle changes back to **blue**. \u2192 This is the **second color change**.\n4. **At 1.2 seconds**: The circle changes to **purple**. \u2192 This is the **third color change**.\n5. **At 1.5 seconds**: The circle changes back to **blue**. \u2192 This is the **fourth color change**.\n6. **From 1.6 seconds to 3.9 seconds**: The circle remains **blue** and does not change color.\n\nSo, the color changes occurred at:\n- 0.5 seconds (blue \u2192 red)\n- 0.9 seconds (red \u2192 blue)\n- 1.2 seconds (blue \u2192 purple)\n- 1.5 seconds (purple \u2192 blue)\n\nThat\u2019s a total of **4 color changes**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s6_d24.0_total_transitions_s51212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 6,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At 0.0 seconds, the circle is **yellow**.\n2. At 0.3 seconds, the circle changes to **teal** (this is the first color change).\n3. At 0.4 seconds, the circle changes to **pink** (this is the second color change).\n4. At 0.6 seconds, the circle changes to **coral** (this is the third color change).\n5. At 0.8 seconds, the circle changes back to **teal** (this is the fourth color change).\n6. From 0.9 seconds to 1.9 seconds, the circle remains **teal** and does not change color.\n\nSo, the color changes occurred at the following timestamps:\n- 0.3 seconds (yellow \u2192 teal)\n- 0.4 seconds (teal \u2192 pink)\n- 0.6 seconds (pink \u2192 coral)\n- 0.8 seconds (coral \u2192 teal)\n\nThat\u2019s a total of **4** color changes.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\n1. At 0.0 seconds, the circle is **yellow**.\n2. At 0.5 seconds, the circle changes to **teal**. \u2192 This is the **first color change**.\n3. At 0.9 seconds, the circle changes to **pink**. \u2192 This is the **second color change**.\n4. At 1.2 seconds, the circle changes to **red**. \u2192 This is the **third color change**.\n5. At 1.5 seconds, the circle changes back to **teal**. \u2192 This is the **fourth color change**.\n6. From 1.6 seconds to 3.9 seconds, the circle remains **teal**. No further changes occur.\n\nTherefore, the total number of color changes is **4**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a yellow circle.\n\n- At 0.0 seconds: The circle is **yellow**.\n- At 0.3 seconds: The circle changes to **teal**. (First color change)\n- At 0.4 seconds: The circle changes to **pink**. (Second color change)\n- At 0.6 seconds: The circle changes to **coral**. (Third color change)\n- At 0.8 seconds: The circle changes back to **teal**. (Fourth color change)\n- From 0.9 seconds to 1.9 seconds: The circle remains **teal**. No further changes.\n\nSo, we have the following color changes:\n1. Yellow \u2192 Teal (at 0.3 seconds)\n2. Teal \u2192 Pink (at 0.4 seconds)\n3. Pink \u2192 Coral (at 0.6 seconds)\n4. Coral \u2192 Teal (at 0.8 seconds)\n\nThat\u2019s a total of **4** color changes.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At 0.0 seconds, the circle is yellow.\n2. At 0.5 seconds, the circle changes to teal (a greenish-blue color).\n3. At 0.9 seconds, the circle changes to magenta (a pinkish-purple color).\n4. At 1.2 seconds, the circle changes to coral (a reddish-orange color).\n5. At 1.5 seconds, the circle changes back to teal.\n6. From 1.5 seconds to 3.9 seconds, the circle remains teal.\n\nSo, we have the following color changes:\n- Yellow \u2192 Teal (at 0.5 seconds)\n- Teal \u2192 Magenta (at 0.9 seconds)\n- Magenta \u2192 Coral (at 1.2 seconds)\n- Coral \u2192 Teal (at 1.5 seconds)\n\nThat\u2019s a total of 4 color changes.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s7_d24.0_total_transitions_s52212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 7,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video consists of a sequence of frames, each showing a circle on a black background. The circle changes color between frames.\n\nHere is the sequence of color changes:\n\n- **Frame 0.0 seconds**: The circle is **pink**.\n- **Frame 0.1 seconds**: The circle is still **pink** (no change).\n- **Frame 0.2 seconds**: The circle changes to **blue**. \u2192 **First color change**.\n- **Frame 0.3 seconds**: The circle is still **blue** (no change).\n- **Frame 0.4 seconds**: The circle changes to **purple**. \u2192 **Second color change**.\n- **Frame 0.5 seconds**: The circle is still **purple** (no change).\n- **Frame 0.6 seconds**: The circle changes back to **blue**. \u2192 **Third color change**.\n- **Frame 0.7 seconds**: The circle is still **blue** (no change).\n- **Frame 0.8 seconds**: The circle changes back to **purple**. \u2192 **Fourth color change**.\n- **Frame 0.9 seconds**: The circle is still **purple** (no change).\n- **Frame 1.0 seconds**: The circle is still **purple** (no change).\n- **Frame 1.1 seconds**: The circle is still **purple** (no change).\n- **Frame 1.2 seconds**: The circle is still **purple** (no change).\n- **Frame 1.3 seconds**: The circle is still **purple** (no change).\n- **Frame 1.4 seconds**: The circle is still **purple** (no change).\n- **Frame 1.5 seconds**: The circle is still **purple** (no change).\n- **Frame 1.6 seconds**: The circle is still **purple** (no change).\n- **Frame 1.7 seconds**: The circle is still **purple** (no change).\n- **Frame 1.8 seconds**: The circle is still **purple** (no change).\n- **Frame 1.9 seconds**: The circle is still **purple** (no change).\n\nNow, let's count the actual color changes (i.e., when the color differs from the previous frame):\n\n1. From **pink** to **blue** (at 0.2 seconds) \u2192 1st change.\n2. From **blue** to **purple** (at 0.4 seconds) \u2192 2nd change.\n3. From **purple** to **blue** (at 0.6 seconds) \u2192 3rd change.\n4. From **blue** to **purple** (at 0.8 seconds) \u2192 4th change.\n\nAfter that, the circle remains purple until the end.\n\nTherefore, there are **4** color changes in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At 0.0 seconds, the circle is pink.\n2. At 0.5 seconds, the circle changes to blue. \u2192 This is the first color change.\n3. At 0.9 seconds, the circle changes to purple. \u2192 This is the second color change.\n4. At 1.1 seconds, the circle changes back to blue. \u2192 This is the third color change.\n5. At 1.5 seconds, the circle changes back to purple. \u2192 This is the fourth color change.\n6. From 1.6 seconds to 3.9 seconds, the circle remains purple. \u2192 No change.\n\nSo, the color changes occurred at:\n- 0.5 seconds (pink \u2192 blue)\n- 0.9 seconds (blue \u2192 purple)\n- 1.1 seconds (purple \u2192 blue)\n- 1.5 seconds (blue \u2192 purple)\n\nThat\u2019s a total of 4 color changes.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video consists of the following frames:\n\n- **0.0 seconds**: The circle is **pink**.\n- **0.1 seconds**: The circle is still **pink** (no change).\n- **0.2 seconds**: The circle changes to **blue**. \u2192 **1st color change**.\n- **0.3 seconds**: The circle is still **blue** (no change).\n- **0.4 seconds**: The circle changes to **purple**. \u2192 **2nd color change**.\n- **0.5 seconds**: The circle is still **purple** (no change).\n- **0.6 seconds**: The circle changes back to **blue**. \u2192 **3rd color change**.\n- **0.7 seconds**: The circle is still **blue** (no change).\n- **0.8 seconds**: The circle changes back to **purple**. \u2192 **4th color change**.\n- **0.9 seconds**: The circle is still **purple** (no change).\n- **1.0 seconds**: The circle is still **purple** (no change).\n- **1.1 seconds**: The circle is still **purple** (no change).\n- **1.2 seconds**: The circle is still **purple** (no change).\n- **1.3 seconds**: The circle is still **purple** (no change).\n- **1.4 seconds**: The circle is still **purple** (no change).\n- **1.5 seconds**: The circle is still **purple** (no change).\n- **1.6 seconds**: The circle is still **purple** (no change).\n- **1.7 seconds**: The circle is still **purple** (no change).\n- **1.8 seconds**: The circle is still **purple** (no change).\n- **1.9 seconds**: The circle is still **purple** (no change).\n\nNow, let\u2019s list the color changes:\n\n1. **0.2 seconds**: Pink \u2192 Blue\n2. **0.4 seconds**: Blue \u2192 Purple\n3. **0.6 seconds**: Purple \u2192 Blue\n4. **0.8 seconds**: Blue \u2192 Purple\n\nThat\u2019s a total of **4 color changes**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At 0.0 seconds, the circle is **pink**.\n2. At 0.5 seconds, the circle changes to **blue**. \u2192 This is the **first color change**.\n3. At 0.9 seconds, the circle changes to **purple**. \u2192 This is the **second color change**.\n4. At 1.2 seconds, the circle changes back to **blue**. \u2192 This is the **third color change**.\n5. At 1.5 seconds, the circle changes back to **purple**. \u2192 This is the **fourth color change**.\n6. From 1.9 seconds to 3.9 seconds, the circle remains **purple**. \u2192 No further changes.\n\nSo, we have four distinct color changes:\n- Pink \u2192 Blue\n- Blue \u2192 Purple\n- Purple \u2192 Blue\n- Blue \u2192 Purple\n\nTherefore, the total number of color changes is 4.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s8_d24.0_total_transitions_s53212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 8,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At **0.0 seconds**, the circle is **yellow**.\n2. At **0.2 seconds**, the circle changes to **green**. \u2192 This is the **first color change**.\n3. At **0.4 seconds**, the circle changes to **orange**. \u2192 This is the **second color change**.\n4. At **0.5 seconds**, the circle changes back to **yellow**. \u2192 This is the **third color change**.\n5. At **0.7 seconds**, the circle changes to **pink**. \u2192 This is the **fourth color change**.\n6. From **0.9 seconds to 1.9 seconds**, the circle remains **pink**. \u2192 No further changes.\n\nSo, the color changes occurred at:\n- 0.2 seconds (yellow \u2192 green)\n- 0.4 seconds (green \u2192 orange)\n- 0.5 seconds (orange \u2192 yellow)\n- 0.7 seconds (yellow \u2192 pink)\n\nThat\u2019s a total of **4 color changes**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\n1. At 0.0 seconds, the circle is **yellow**.\n2. At 0.4 seconds, the circle changes to **green**. \u2192 This is the **first color change**.\n3. At 0.7 seconds, the circle changes to **orange**. \u2192 This is the **second color change**.\n4. At 1.0 seconds, the circle changes back to **yellow**. \u2192 This is the **third color change**.\n5. At 1.4 seconds, the circle changes to **pink**. \u2192 This is the **fourth color change**.\n6. From 1.4 seconds to 3.9 seconds, the circle remains **pink**. \u2192 No further changes.\n\nSo, the color changes occurred at:\n- 0.4 seconds (yellow \u2192 green)\n- 0.7 seconds (green \u2192 orange)\n- 1.0 seconds (orange \u2192 yellow)\n- 1.4 seconds (yellow \u2192 pink)\n\nThat\u2019s a total of **4 color changes**.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video shows a single circle on a black background, and the circle changes color at specific moments.\n\n- At 0.0 seconds: The circle is **yellow**.\n- At 0.2 seconds: The circle changes to **green**. \u2192 This is the **first color change**.\n- At 0.4 seconds: The circle changes to **orange**. \u2192 This is the **second color change**.\n- At 0.5 seconds: The circle changes back to **yellow**. \u2192 This is the **third color change**.\n- At 0.7 seconds: The circle changes to **pink**. \u2192 This is the **fourth color change**.\n- From 0.7 seconds to 1.9 seconds: The circle remains **pink**. No further changes.\n\nSo, we have four distinct color changes:\n\n1. Yellow \u2192 Green\n2. Green \u2192 Orange\n3. Orange \u2192 Yellow\n4. Yellow \u2192 Pink\n\nTherefore, the total number of color changes is 4.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a **yellow** circle.\n\n- From 0.0 to 0.3 seconds: The circle is **yellow**.\n- At 0.4 seconds: The circle changes to **green**. \u2192 **First color change**.\n- From 0.4 to 0.6 seconds: The circle is **green**.\n- At 0.7 seconds: The circle changes to **orange**. \u2192 **Second color change**.\n- From 0.7 to 0.9 seconds: The circle is **orange**.\n- At 1.0 seconds: The circle changes back to **yellow**. \u2192 **Third color change**.\n- From 1.0 to 1.3 seconds: The circle is **yellow**.\n- At 1.4 seconds: The circle changes to **pink**. \u2192 **Fourth color change**.\n- From 1.4 to 3.9 seconds: The circle remains **pink**.\n\nSo, the color changes occur at:\n1. 0.4 seconds (yellow \u2192 green)\n2. 0.7 seconds (green \u2192 orange)\n3. 1.0 seconds (orange \u2192 yellow)\n4. 1.4 seconds (yellow \u2192 pink)\n\nThere are **4** color changes in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        }
+      }
+    },
+    {
+      "video_name": "sweep_total_transitions_c4_f0.5_s9_d24.0_total_transitions_s54212.mp4",
+      "metadata": {
+        "count": 4,
+        "frequency": 0.5,
+        "seed": 9,
+        "duration": 24.0
+      },
+      "ground_truth": 4,
+      "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+      "predictions": {
+        "Baseline": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video frames are:\n\n- **0.0 seconds**: The circle is pinkish-red.\n- **0.1 seconds**: The circle is still pinkish-red.\n- **0.2 seconds**: The circle changes to purple.\n- **0.3 seconds**: The circle is still purple.\n- **0.4 seconds**: The circle changes back to pinkish-red.\n- **0.5 seconds**: The circle is still pinkish-red.\n- **0.6 seconds**: The circle changes to purple again.\n- **0.7 seconds**: The circle is still purple.\n- **0.8 seconds**: The circle changes to coral/orange.\n- **0.9 seconds**: The circle is still coral/orange.\n- **1.0 seconds**: The circle is still coral/orange.\n- **1.1 seconds**: The circle is still coral/orange.\n- **1.2 seconds**: The circle is still coral/orange.\n- **1.3 seconds**: The circle is still coral/orange.\n- **1.4 seconds**: The circle is still coral/orange.\n- **1.5 seconds**: The circle is still coral/orange.\n- **1.6 seconds**: The circle is still coral/orange.\n- **1.7 seconds**: The circle is still coral/orange.\n- **1.8 seconds**: The circle is still coral/orange.\n- **1.9 seconds**: The circle is still coral/orange.\n\nNow, let\u2019s identify the color changes:\n\n1. **0.2 seconds**: Pinkish-red \u2192 Purple (1st change)\n2. **0.4 seconds**: Purple \u2192 Pinkish-red (2nd change)\n3. **0.6 seconds**: Pinkish-red \u2192 Purple (3rd change)\n4. **0.8 seconds**: Purple \u2192 Coral/orange (4th change)\n\nAfter 0.8 seconds, the color remains coral/orange until the end.\n\nSo, there are **4** color changes in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Temporal_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video starts at 0.0 seconds with a pink circle.\n\n- From 0.0 to 0.4 seconds: The circle is pink.\n- At 0.5 seconds: The circle changes to purple.\n- From 0.5 to 0.8 seconds: The circle is purple.\n- At 0.9 seconds: The circle changes back to pink.\n- From 0.9 to 1.2 seconds: The circle is pink.\n- At 1.3 seconds: The circle changes to purple.\n- From 1.3 to 1.4 seconds: The circle is purple.\n- At 1.5 seconds: The circle changes to red.\n- From 1.5 to 3.9 seconds: The circle remains red.\n\nNow, let's count the distinct color changes:\n\n1. Pink \u2192 Purple (at 0.5 seconds)\n2. Purple \u2192 Pink (at 0.9 seconds)\n3. Pink \u2192 Purple (at 1.3 seconds)\n4. Purple \u2192 Red (at 1.5 seconds)\n\nSo, there are 4 color changes in total.\n\n\\boxed{4}",
+          "parsed_count": 4,
+          "correct": true
+        },
+        "High_Spatial_Resolution": {
+          "text_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At 0.0 seconds: The circle is pinkish-red.\n- At 0.1 seconds: The circle is still pinkish-red (no change).\n- At 0.2 seconds: The circle changes to purple. \u2192 **First color change**.\n- At 0.3 seconds: The circle changes back to pinkish-red. \u2192 **Second color change**.\n- At 0.4 seconds: The circle is still pinkish-red (no change).\n- At 0.5 seconds: The circle changes to purple. \u2192 **Third color change**.\n- At 0.6 seconds: The circle changes back to pinkish-red. \u2192 **Fourth color change**.\n- At 0.7 seconds: The circle is still pinkish-red (no change).\n- At 0.8 seconds: The circle changes to coral/orange. \u2192 **Fifth color change**.\n- At 0.9 seconds: The circle is still coral/orange (no change).\n- At 1.0 seconds: The circle is still coral/orange (no change).\n- At 1.1 seconds: The circle is still coral/orange (no change).\n- At 1.2 seconds: The circle is still coral/orange (no change).\n- At 1.3 seconds: The circle is still coral/orange (no change).\n- At 1.4 seconds: The circle is still coral/orange (no change).\n- At 1.5 seconds: The circle is still coral/orange (no change).\n- At 1.6 seconds: The circle is still coral/orange (no change).\n- At 1.7 seconds: The circle is still coral/orange (no change).\n- At 1.8 seconds: The circle is still coral/orange (no change).\n- At 1.9 seconds: The circle is still coral/orange (no change).\n\nSo, the color changes occurred at:\n1. 0.2 seconds (pinkish-red \u2192 purple)\n2. 0.5 seconds (purple \u2192 pinkish-red)\n3. 0.8 seconds (pinkish-red \u2192 coral/orange)\n\nWait, let me recheck the timestamps.\n\nActually, looking at the timestamps again:\n- 0.0 \u2192 0.1: pinkish-red (no change)\n- 0.2 \u2192 0.3: purple (change from pinkish-red at 0.2)\n- 0.4 \u2192 0.5: pinkish-red (change from purple at 0.4)\n- 0.6 \u2192 0.7: purple (change from pinkish-red at 0.6)\n- 0.8 \u2192 0.9: coral/orange (change from purple at 0.8)\n\nSo, the changes are:\n1. 0.2 seconds (pinkish-red \u2192 purple)\n2. 0.5 seconds (purple \u2192 pinkish-red)\n3. 0.8 seconds (pinkish-red \u2192 coral/orange)\n\nThat\u2019s 3 color changes.\n\nBut wait, let\u2019s look at the exact frame-by-frame description.\n\nThe description says:\n- 0.0: pinkish-red\n- 0.1: pinkish-red\n- 0.2: purple\n- 0.3: pinkish-red\n- 0.4: purple\n- 0.5: pinkish-red\n- 0.6: purple\n- 0.7: coral/orange\n- 0.8: coral/orange\n- 0.9: coral/orange\n- 1.0: coral/orange\n- 1.1: coral/orange\n- 1.2: coral/orange\n- 1.3: coral/orange\n- 1.4: coral/orange\n- 1.5: coral/orange\n- 1.6: coral/orange\n- 1.7: coral/orange\n- 1.8: coral/orange\n- 1.9: coral/orange\n\nSo, the color changes are:\n- From 0.1 to 0.2: pinkish-red \u2192 purple \u2192 **1st change**\n- From 0.3 to 0.4: pinkish-red \u2192 purple \u2192 **2nd change**\n- From 0.6 to 0.7: pinkish-red \u2192 purple \u2192 **3rd change**\n- From 0.7 to 0.8: purple \u2192 coral/orange \u2192 **4th change**\n\nWait, but at 0.7, it\u2019s still purple? Let me check the description again.\n\nActually, the description says:\n- 0.7: purple\n- 0.8: coral/orange\n\nSo, from 0.7 to 0.8: purple \u2192 coral/or",
+          "parsed_count": null,
+          "correct": false
+        },
+        "High_Temporal_And_Spatial": {
+          "text_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\n1. **Initial state (0.0 - 0.4 seconds):** The circle is pinkish-red (let's call this Color A).\n\n2. **Change at 0.5 seconds:** The circle changes to purple (Color B). This is the first color change.\n\n3. **Change at 0.9 seconds:** The circle changes back to pinkish-red (Color A). This is the second color change.\n\n4. **Change at 1.5 seconds:** The circle changes to coral/orange (Color C). This is the third color change.\n\n5. **From 1.6 seconds to 3.9 seconds:** The circle remains coral/orange (Color C) without any further changes.\n\nSo, we have three distinct color changes:\n- Pinkish-red \u2192 Purple\n- Purple \u2192 Pinkish-red\n- Pinkish-red \u2192 Coral/orange\n\nTherefore, the total number of color changes is 3.\n\n\\boxed{3}",
+          "parsed_count": 3,
+          "correct": false
+        }
+      }
+    }
+  ]
+}

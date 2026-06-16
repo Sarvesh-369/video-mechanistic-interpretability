@@ -1,0 +1,33 @@
+{
+  "train_accuracy": 1.0,
+  "probing_accuracy": 0.58,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "layer_idx": -2,
+  "classification_report": {
+    "Wall A (Negative)": {
+      "precision": 0.4482758620689655,
+      "recall": 0.7222222222222222,
+      "f1-score": 0.5531914893617021,
+      "support": 18.0
+    },
+    "Wall B (Positive)": {
+      "precision": 0.7619047619047619,
+      "recall": 0.5,
+      "f1-score": 0.6037735849056604,
+      "support": 32.0
+    },
+    "accuracy": 0.58,
+    "macro avg": {
+      "precision": 0.6050903119868637,
+      "recall": 0.6111111111111112,
+      "f1-score": 0.5784825371336813,
+      "support": 50.0
+    },
+    "weighted avg": {
+      "precision": 0.6489983579638752,
+      "recall": 0.58,
+      "f1-score": 0.5855640305098354,
+      "support": 50.0
+    }
+  }
+}

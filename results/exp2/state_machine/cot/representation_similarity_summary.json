@@ -1,0 +1,1402 @@
+[
+  {
+    "consecutive_sims": [
+      0.49235811829566956,
+      0.9889565706253052,
+      0.9886799454689026,
+      0.9805213212966919,
+      0.9869527220726013,
+      0.9768230319023132,
+      0.98343425989151,
+      0.9779053926467896,
+      0.9858843684196472,
+      0.986397385597229,
+      0.9834702014923096
+    ],
+    "init_sims": [
+      0.9999999403953552,
+      0.49235811829566956,
+      0.48648402094841003,
+      0.46586671471595764,
+      0.48005515336990356,
+      0.4666779041290283,
+      0.4597988426685333,
+      0.45608896017074585,
+      0.4441729784011841,
+      0.4134761691093445,
+      0.4095248878002167,
+      0.4216541051864624
+    ],
+    "centered_consecutive_sims": [
+      -0.885480523109436,
+      0.9211422801017761,
+      0.9291386008262634,
+      0.8803200721740723,
+      0.9209797978401184,
+      0.8672646284103394,
+      0.9074697494506836,
+      0.8815708160400391,
+      0.9431343078613281,
+      0.948862612247467,
+      0.9382264018058777
+    ],
+    "centered_init_sims": [
+      1.0000001192092896,
+      -0.885480523109436,
+      -0.9083009362220764,
+      -0.928914487361908,
+      -0.9025779962539673,
+      -0.9425736665725708,
+      -0.9476342797279358,
+      -0.9120943546295166,
+      -0.9633562564849854,
+      -0.9430609941482544,
+      -0.9382700324058533,
+      -0.915330708026886
+    ],
+    "trajectory_2d": [
+      [
+        440.3175354003906,
+        -0.8553691506385803
+      ],
+      [
+        -34.17094802856445,
+        13.204911231994629
+      ],
+      [
+        -35.925628662109375,
+        10.509906768798828
+      ],
+      [
+        -38.016178131103516,
+        10.436861038208008
+      ],
+      [
+        -36.610328674316406,
+        11.527522087097168
+      ],
+      [
+        -39.37979507446289,
+        4.659144401550293
+      ],
+      [
+        -39.16061782836914,
+        1.5571516752243042
+      ],
+      [
+        -39.302711486816406,
+        -3.7186379432678223
+      ],
+      [
+        -41.885353088378906,
+        -5.491759300231934
+      ],
+      [
+        -45.509849548339844,
+        -12.397650718688965
+      ],
+      [
+        -45.817718505859375,
+        -13.627830505371094
+      ],
+      [
+        -44.53841018676758,
+        -15.804248809814453
+      ]
+    ],
+    "explained_variance": [
+      0.9866073131561279,
+      0.005522133316844702
+    ],
+    "metadata": {
+      "count": 2,
+      "frequency": 0.5,
+      "seed": 9,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c2_f0.5_s9_d24.0_total_transitions_s34212.mp4",
+    "cohort": "cohort_A",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At **0.0 seconds**, the circle is **yellow**.\n- At **0.3 seconds**, the circle changes to **red**. This is the **first color change**.\n- At **0.4 seconds**, the circle changes to **orange**. This is the **second color change**.\n- From **0.5 seconds to 1.9 seconds**, the circle remains **orange** and does not change color.\n\nSo, we have two distinct color changes:\n1. Yellow \u2192 Red\n2. Red \u2192 Orange\n\nTherefore, the total number of color changes is **2**.\n\n\\boxed{2}"
+  },
+  {
+    "consecutive_sims": [
+      0.9624507427215576,
+      0.8014745712280273,
+      0.9922482371330261,
+      0.9861142635345459,
+      0.9841098785400391,
+      0.988349437713623,
+      0.9866671562194824,
+      0.9868995547294617,
+      0.9703099131584167,
+      0.9845930933952332
+    ],
+    "init_sims": [
+      0.9999998807907104,
+      0.9624507427215576,
+      0.632021427154541,
+      0.6263503432273865,
+      0.6122903823852539,
+      0.6110772490501404,
+      0.5952116250991821,
+      0.5963627099990845,
+      0.5833542346954346,
+      0.5612119436264038,
+      0.5546180605888367
+    ],
+    "centered_consecutive_sims": [
+      0.9736257791519165,
+      -0.8065606355667114,
+      0.9095011353492737,
+      0.8516825437545776,
+      0.8379752039909363,
+      0.8924699425697327,
+      0.8785785436630249,
+      0.892399251461029,
+      0.7906603813171387,
+      0.9097491502761841
+    ],
+    "centered_init_sims": [
+      1.0000003576278687,
+      0.9736257791519165,
+      -0.8590021133422852,
+      -0.8854116201400757,
+      -0.8929515480995178,
+      -0.9011662602424622,
+      -0.8955238461494446,
+      -0.9457483291625977,
+      -0.878482460975647,
+      -0.9074175357818604,
+      -0.884803831577301
+    ],
+    "trajectory_2d": [
+      [
+        190.72708129882812,
+        -3.643298625946045
+      ],
+      [
+        80.50162506103516,
+        4.894137382507324
+      ],
+      [
+        -24.927583694458008,
+        13.644563674926758
+      ],
+      [
+        -26.49785804748535,
+        10.37917709350586
+      ],
+      [
+        -27.858800888061523,
+        8.062358856201172
+      ],
+      [
+        -28.58331871032715,
+        5.017648220062256
+      ],
+      [
+        -30.22528648376465,
+        -1.5021260976791382
+      ],
+      [
+        -30.837623596191406,
+        -5.705327987670898
+      ],
+      [
+        -31.63837242126465,
+        -10.681412696838379
+      ],
+      [
+        -35.00657272338867,
+        -7.550642013549805
+      ],
+      [
+        -35.65334701538086,
+        -12.915047645568848
+      ]
+    ],
+    "explained_variance": [
+      0.9569030404090881,
+      0.01485831942409277
+    ],
+    "metadata": {
+      "count": 3,
+      "frequency": 0.5,
+      "seed": 3,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c3_f0.5_s3_d24.0_total_transitions_s38212.mp4",
+    "cohort": "cohort_A",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At **0.0 seconds**, the circle is **red**.\n- At **0.2 seconds**, the circle changes to **teal** (this is the first color change).\n- At **0.4 seconds**, the circle changes to **purple** (this is the second color change).\n- At **0.5 seconds**, the circle changes back to **teal** (this is the third color change).\n- From **0.6 seconds to 1.9 seconds**, the circle remains **teal** and does not change color.\n\nSo, the color changes occurred at:\n1. 0.2 seconds (red \u2192 teal)\n2. 0.4 seconds (teal \u2192 purple)\n3. 0.5 seconds (purple \u2192 teal)\n\nThat\u2019s a total of **3** color changes.\n\n\\boxed{3}"
+  },
+  {
+    "consecutive_sims": [
+      0.49434471130371094,
+      0.4930402338504791,
+      0.9887603521347046,
+      0.9834339618682861,
+      0.9843227863311768,
+      0.9843761920928955,
+      0.9844486117362976,
+      0.9882860779762268,
+      0.984046459197998,
+      0.9851557016372681,
+      0.9813945889472961
+    ],
+    "init_sims": [
+      0.9999999403953552,
+      0.49434471130371094,
+      0.956110954284668,
+      0.9643208384513855,
+      0.9471830725669861,
+      0.9395401477813721,
+      0.9459487795829773,
+      0.9240807294845581,
+      0.9127230644226074,
+      0.9100061058998108,
+      0.897190272808075,
+      0.875910758972168
+    ],
+    "centered_consecutive_sims": [
+      -0.724230945110321,
+      -0.8964663743972778,
+      0.928612470626831,
+      0.8988946676254272,
+      0.9056695103645325,
+      0.9067493081092834,
+      0.9176657199859619,
+      0.9407022595405579,
+      0.9247394800186157,
+      0.9386230707168579,
+      0.9376050233840942
+    ],
+    "centered_init_sims": [
+      1.0000001192092896,
+      -0.724230945110321,
+      0.7545607686042786,
+      0.8013051748275757,
+      0.7064604163169861,
+      0.6662896275520325,
+      0.7009312510490417,
+      0.6002686023712158,
+      0.5462145209312439,
+      0.544790506362915,
+      0.5082061290740967,
+      0.4732370972633362
+    ],
+    "trajectory_2d": [
+      [
+        -33.8912239074707,
+        30.000375747680664
+      ],
+      [
+        442.7273864746094,
+        -1.041228175163269
+      ],
+      [
+        -36.21640396118164,
+        9.187163352966309
+      ],
+      [
+        -37.686153411865234,
+        9.602681159973145
+      ],
+      [
+        -38.995887756347656,
+        4.207095623016357
+      ],
+      [
+        -38.445770263671875,
+        2.763923168182373
+      ],
+      [
+        -39.239952087402344,
+        2.608971357345581
+      ],
+      [
+        -41.64106369018555,
+        -5.236036777496338
+      ],
+      [
+        -41.80919647216797,
+        -9.719846725463867
+      ],
+      [
+        -42.88626480102539,
+        -10.923929214477539
+      ],
+      [
+        -44.47926712036133,
+        -13.421228408813477
+      ],
+      [
+        -47.436012268066406,
+        -18.027942657470703
+      ]
+    ],
+    "explained_variance": [
+      0.9829190373420715,
+      0.008526742458343506
+    ],
+    "metadata": {
+      "count": 1,
+      "frequency": 0.5,
+      "seed": 3,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c1_f0.5_s3_d24.0_total_transitions_s18212.mp4",
+    "cohort": "cohort_A",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to determine the number of color changes.\n\n- At **0.0 seconds**, the circle is **coral** (a reddish-orange color).\n- At **0.3 seconds**, the circle changes to **orange** (a more yellowish-orange color).\n- From **0.3 seconds to 1.9 seconds**, the circle remains **orange** without any further changes.\n\n### Step-by-step reasoning:\n\n1. The circle starts as coral at 0.0 seconds.\n2. At 0.3 seconds, it changes to orange \u2014 that\u2019s the **first color change**.\n3. It stays orange until the end (1.9 seconds) \u2014 no additional changes occur.\n\nTherefore, there is **only one color change** in the entire video.\n\nFinal answer:  \n\\boxed{1}"
+  },
+  {
+    "consecutive_sims": [
+      0.5271201729774475,
+      0.9881433248519897,
+      0.9875761270523071,
+      0.9903086423873901,
+      0.9836502075195312,
+      0.9740598201751709,
+      0.9831219911575317,
+      0.9829761385917664,
+      0.9867756366729736,
+      0.9840973019599915,
+      0.9825342893600464
+    ],
+    "init_sims": [
+      1.0,
+      0.5271201729774475,
+      0.5043697953224182,
+      0.478576123714447,
+      0.4767627716064453,
+      0.47082269191741943,
+      0.4561542570590973,
+      0.46032553911209106,
+      0.4619022309780121,
+      0.4172994792461395,
+      0.42617467045783997,
+      0.4173741340637207
+    ],
+    "centered_consecutive_sims": [
+      -0.7644248008728027,
+      0.8959664106369019,
+      0.9030122756958008,
+      0.9353299140930176,
+      0.8932988047599792,
+      0.8410105109214783,
+      0.9075223207473755,
+      0.910251259803772,
+      0.9477978348731995,
+      0.9300997257232666,
+      0.92767333984375
+    ],
+    "centered_init_sims": [
+      0.9999999403953552,
+      -0.7644248008728027,
+      -0.8550518751144409,
+      -0.9427053332328796,
+      -0.9505341053009033,
+      -0.915108859539032,
+      -0.9553425908088684,
+      -0.9305669665336609,
+      -0.9468619227409363,
+      -0.9377487897872925,
+      -0.9299851655960083,
+      -0.9036117792129517
+    ],
+    "trajectory_2d": [
+      [
+        414.7127685546875,
+        -1.3232219219207764
+      ],
+      [
+        -27.408151626586914,
+        20.44717025756836
+      ],
+      [
+        -31.460851669311523,
+        17.168231964111328
+      ],
+      [
+        -35.92119216918945,
+        8.862669944763184
+      ],
+      [
+        -36.67842483520508,
+        4.2790913581848145
+      ],
+      [
+        -36.33311080932617,
+        4.680832386016846
+      ],
+      [
+        -38.98939514160156,
+        -1.292877435684204
+      ],
+      [
+        -38.803707122802734,
+        -3.970712184906006
+      ],
+      [
+        -39.26365661621094,
+        -6.958559989929199
+      ],
+      [
+        -43.96985626220703,
+        -13.094027519226074
+      ],
+      [
+        -42.13368225097656,
+        -11.579434394836426
+      ],
+      [
+        -43.750572204589844,
+        -17.21915626525879
+      ]
+    ],
+    "explained_variance": [
+      0.9843395352363586,
+      0.007865606807172298
+    ],
+    "metadata": {
+      "count": 2,
+      "frequency": 1.0,
+      "seed": 0,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c2_f1.0_s0_d24.0_total_transitions_s30212.mp4",
+    "cohort": "cohort_A",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At 0.0 seconds: The circle is **yellow**.\n2. At 0.1 seconds: The circle is still **yellow** (no change yet).\n3. At 0.2 seconds: The circle changes to **olive green**. \u2192 This is the **first color change**.\n4. At 0.3 seconds: The circle changes to **pink/red**. \u2192 This is the **second color change**.\n5. From 0.4 seconds to 1.9 seconds: The circle remains **pink/red**. \u2192 No further changes.\n\nSo, we have two distinct color changes:\n- Yellow \u2192 Olive Green\n- Olive Green \u2192 Pink/Red\n\nTherefore, the total number of color changes is **2**.\n\n\\boxed{2}"
+  },
+  {
+    "consecutive_sims": [
+      0.573195219039917,
+      0.9844505786895752,
+      0.9894515872001648,
+      0.9841419458389282,
+      0.9813003540039062,
+      0.9875956773757935,
+      0.9884467124938965,
+      0.9830247759819031,
+      0.9864529967308044,
+      0.983819305896759,
+      0.9817480444908142
+    ],
+    "init_sims": [
+      1.0,
+      0.573195219039917,
+      0.5510499477386475,
+      0.545141875743866,
+      0.5511499643325806,
+      0.5417598485946655,
+      0.5237095355987549,
+      0.5283145904541016,
+      0.5200019478797913,
+      0.5130850076675415,
+      0.511455774307251,
+      0.4819953441619873
+    ],
+    "centered_consecutive_sims": [
+      -0.6898958086967468,
+      0.760297417640686,
+      0.863349974155426,
+      0.7993726134300232,
+      0.7534491419792175,
+      0.8460063338279724,
+      0.8711432218551636,
+      0.8162156343460083,
+      0.8703739643096924,
+      0.8598642945289612,
+      0.8799751996994019
+    ],
+    "centered_init_sims": [
+      1.0000001192092896,
+      -0.6898958086967468,
+      -0.7987112998962402,
+      -0.8500316739082336,
+      -0.8267548084259033,
+      -0.8598568439483643,
+      -0.9062203168869019,
+      -0.8519537448883057,
+      -0.9044127464294434,
+      -0.8987315893173218,
+      -0.8714275360107422,
+      -0.8319833874702454
+    ],
+    "trajectory_2d": [
+      [
+        280.313232421875,
+        -1.2716959714889526
+      ],
+      [
+        -18.141939163208008,
+        16.48548698425293
+      ],
+      [
+        -22.46300506591797,
+        10.271442413330078
+      ],
+      [
+        -23.978675842285156,
+        8.0864839553833
+      ],
+      [
+        -22.939083099365234,
+        7.32130765914917
+      ],
+      [
+        -23.779861450195312,
+        7.11379337310791
+      ],
+      [
+        -26.650083541870117,
+        1.5446839332580566
+      ],
+      [
+        -25.657241821289062,
+        -3.0203113555908203
+      ],
+      [
+        -27.5526123046875,
+        -7.939002513885498
+      ],
+      [
+        -28.56009864807129,
+        -9.062698364257812
+      ],
+      [
+        -28.78803062438965,
+        -11.848442077636719
+      ],
+      [
+        -31.80239486694336,
+        -17.68105125427246
+      ]
+    ],
+    "explained_variance": [
+      0.9685169458389282,
+      0.013064398430287838
+    ],
+    "metadata": {
+      "count": 5,
+      "frequency": 0.5,
+      "seed": 2,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c5_f0.5_s2_d24.0_total_transitions_s57212.mp4",
+    "cohort": "cohort_B",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a **yellow** circle.\n\n- At 0.2 seconds, the circle changes to **pink** \u2192 **1st color change**.\n- At 0.4 seconds, the circle changes to **purple** \u2192 **2nd color change**.\n- At 0.5 seconds, the circle changes to **pinkish-red** (or rose) \u2192 **3rd color change**.\n- At 0.6 seconds, the circle changes to **orange** \u2192 **4th color change**.\n- At 0.7 seconds, the circle changes back to **yellow** \u2192 **5th color change**.\n- At 0.9 seconds, the circle changes to **purple** \u2192 **6th color change**.\n\nAfter 0.9 seconds, the circle remains purple until the end of the video (1.9 seconds), so no further changes occur.\n\nTherefore, there are **6** total color changes.\n\n\\boxed{6}"
+  },
+  {
+    "consecutive_sims": [
+      0.5479680299758911,
+      0.9905080199241638,
+      0.9922456741333008,
+      0.9752768278121948,
+      0.983099639415741,
+      0.9772903919219971,
+      0.9845954179763794,
+      0.9890317916870117,
+      0.9916624426841736,
+      0.9918550252914429
+    ],
+    "init_sims": [
+      0.9999998211860657,
+      0.5479680299758911,
+      0.5425599813461304,
+      0.5437771677970886,
+      0.5252171158790588,
+      0.5230162143707275,
+      0.4954240620136261,
+      0.48399823904037476,
+      0.46886754035949707,
+      0.46978864073753357,
+      0.4622780978679657
+    ],
+    "centered_consecutive_sims": [
+      -0.7962929010391235,
+      0.8980072140693665,
+      0.9136307835578918,
+      0.7396692037582397,
+      0.8191173076629639,
+      0.7985355854034424,
+      0.8740301728248596,
+      0.9257344007492065,
+      0.9495576024055481,
+      0.9539104700088501
+    ],
+    "centered_init_sims": [
+      0.9999998807907104,
+      -0.7962929010391235,
+      -0.8529216051101685,
+      -0.8941597938537598,
+      -0.818261444568634,
+      -0.9489250183105469,
+      -0.8704330921173096,
+      -0.9353801608085632,
+      -0.941532552242279,
+      -0.9188200235366821,
+      -0.9149646162986755
+    ],
+    "trajectory_2d": [
+      [
+        306.3756103515625,
+        -1.2590842247009277
+      ],
+      [
+        -24.76253318786621,
+        14.834156036376953
+      ],
+      [
+        -25.94831085205078,
+        13.747184753417969
+      ],
+      [
+        -26.77664566040039,
+        10.11146354675293
+      ],
+      [
+        -26.968904495239258,
+        6.953522205352783
+      ],
+      [
+        -29.4521541595459,
+        3.577331304550171
+      ],
+      [
+        -30.956565856933594,
+        -6.70128870010376
+      ],
+      [
+        -33.549652099609375,
+        -8.451053619384766
+      ],
+      [
+        -35.717037200927734,
+        -9.017672538757324
+      ],
+      [
+        -35.59163284301758,
+        -11.077123641967773
+      ],
+      [
+        -36.65231704711914,
+        -12.717442512512207
+      ]
+    ],
+    "explained_variance": [
+      0.9776310324668884,
+      0.00998193584382534
+    ],
+    "metadata": {
+      "count": 5,
+      "frequency": 0.5,
+      "seed": 1,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c5_f0.5_s1_d24.0_total_transitions_s56212.mp4",
+    "cohort": "cohort_B",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the number of color changes.\n\nThe video shows a single circle on a black background, and its color changes over time.\n\n- At 0.0 seconds: The circle is **pinkish-red**.\n- At 0.2 seconds: The circle changes to **magenta** (a bright pink). \u2192 **1st color change**.\n- At 0.4 seconds: The circle changes to **light blue**. \u2192 **2nd color change**.\n- At 0.5 seconds: The circle changes to **orange**. \u2192 **3rd color change**.\n- At 0.7 seconds: The circle changes back to **pinkish-red**. \u2192 **4th color change**.\n- At 0.8 seconds: The circle changes to **purple**. \u2192 **5th color change**.\n- At 0.9 seconds: The circle changes back to **light blue**. \u2192 **6th color change**.\n- From 0.9 seconds to 1.9 seconds: The circle remains **light blue**. No further changes.\n\nSo, the color changes occur at the following timestamps:\n- 0.2 seconds (pink \u2192 magenta)\n- 0.4 seconds (magenta \u2192 light blue)\n- 0.5 seconds (light blue \u2192 orange)\n- 0.7 seconds (orange \u2192 pinkish-red)\n- 0.8 seconds (pinkish-red \u2192 purple)\n- 0.9 seconds (purple \u2192 light blue)\n\nThat\u2019s a total of **6 color changes**.\n\n\\boxed{6}"
+  },
+  {
+    "consecutive_sims": [
+      0.5260283946990967,
+      0.9860562086105347,
+      0.9863709211349487,
+      0.9888900518417358,
+      0.9850069880485535,
+      0.9783865213394165,
+      0.9784495830535889,
+      0.9791775941848755,
+      0.9876524209976196,
+      0.9897356033325195,
+      0.9899656772613525
+    ],
+    "init_sims": [
+      0.9999999403953552,
+      0.5260283946990967,
+      0.5085761547088623,
+      0.5053234100341797,
+      0.5004882216453552,
+      0.47977325320243835,
+      0.4851375222206116,
+      0.4569230079650879,
+      0.4735103249549866,
+      0.4483761787414551,
+      0.4456932544708252,
+      0.4342128336429596
+    ],
+    "centered_consecutive_sims": [
+      -0.7622058987617493,
+      0.8779524564743042,
+      0.8814502358436584,
+      0.9074170589447021,
+      0.8853697180747986,
+      0.8441532254219055,
+      0.8670293688774109,
+      0.8797789216041565,
+      0.9357015490531921,
+      0.9474047422409058,
+      0.9542349576950073
+    ],
+    "centered_init_sims": [
+      0.9999997615814209,
+      -0.7622058987617493,
+      -0.8166788220405579,
+      -0.9285634756088257,
+      -0.9020458459854126,
+      -0.937418520450592,
+      -0.9295475482940674,
+      -0.9357869029045105,
+      -0.9175449013710022,
+      -0.9406137466430664,
+      -0.9420086741447449,
+      -0.9104409217834473
+    ],
+    "trajectory_2d": [
+      [
+        384.822509765625,
+        -1.3131682872772217
+      ],
+      [
+        -26.88556480407715,
+        20.339458465576172
+      ],
+      [
+        -29.733980178833008,
+        18.231534957885742
+      ],
+      [
+        -31.551490783691406,
+        8.932750701904297
+      ],
+      [
+        -32.088348388671875,
+        7.170379638671875
+      ],
+      [
+        -34.643409729003906,
+        3.9401943683624268
+      ],
+      [
+        -34.68159866333008,
+        -2.7555105686187744
+      ],
+      [
+        -37.92096710205078,
+        -5.828995227813721
+      ],
+      [
+        -36.73993682861328,
+        -11.008423805236816
+      ],
+      [
+        -39.73923873901367,
+        -10.649298667907715
+      ],
+      [
+        -39.59040832519531,
+        -10.660059928894043
+      ],
+      [
+        -41.24758529663086,
+        -16.398853302001953
+      ]
+    ],
+    "explained_variance": [
+      0.9822275638580322,
+      0.009431655518710613
+    ],
+    "metadata": {
+      "count": 8,
+      "frequency": 1.0,
+      "seed": 1,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c8_f1.0_s1_d24.0_total_transitions_s91212.mp4",
+    "cohort": "cohort_B",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the color changes step by step based on the timestamps provided.\n\nThe sequence of colors shown is as follows:\n\n- At **0.0 seconds**: The circle is **orange**.\n- At **0.1 seconds**: The circle changes to **red** (a reddish-orange, but distinct from orange).\n- At **0.2 seconds**: The circle changes to **purple**.\n- At **0.3 seconds**: The circle changes to **pink**.\n- At **0.4 seconds**: The circle changes back to **orange**.\n- At **0.5 seconds**: The circle changes back to **pink**.\n- At **0.6 seconds**: The circle changes back to **orange**.\n- At **0.7 seconds**: The circle changes to **red**.\n- At **0.8 seconds**: The circle remains **red**.\n- At **0.9 seconds**: The circle remains **red**.\n- At **1.0 seconds**: The circle remains **red**.\n- At **1.1 seconds**: The circle remains **red**.\n- At **1.2 seconds**: The circle remains **red**.\n- At **1.3 seconds**: The circle remains **red**.\n- At **1.4 seconds**: The circle remains **red**.\n- At **1.5 seconds**: The circle remains **red**.\n- At **1.6 seconds**: The circle remains **red**.\n- At **1.7 seconds**: The circle remains **red**.\n- At **1.8 seconds**: The circle remains **red**.\n- At **1.9 seconds**: The circle remains **red**.\n\nNow, let's count the **distinct color changes** (i.e., transitions from one color to another):\n\n1. **0.0 \u2192 0.1**: Orange \u2192 Red \u2705 (Change 1)\n2. **0.1 \u2192 0.2**: Red \u2192 Purple \u2705 (Change 2)\n3. **0.2 \u2192 0.3**: Purple \u2192 Pink \u2705 (Change 3)\n4. **0.3 \u2192 0.4**: Pink \u2192 Orange \u2705 (Change 4)\n5. **0.4 \u2192 0.5**: Orange \u2192 Pink \u2705 (Change 5)\n6. **0.5 \u2192 0.6**: Pink \u2192 Orange \u2705 (Change 6)\n7. **0.6 \u2192 0.7**: Orange \u2192"
+  },
+  {
+    "consecutive_sims": [
+      0.8243510127067566,
+      0.9103654623031616,
+      0.9842678308486938,
+      0.9865620136260986,
+      0.9781605005264282,
+      0.9835878610610962,
+      0.9827786684036255,
+      0.9870292544364929,
+      0.9904502034187317,
+      0.9884233474731445,
+      0.9802209734916687
+    ],
+    "init_sims": [
+      0.9999999403953552,
+      0.8243510127067566,
+      0.5441815853118896,
+      0.5488501787185669,
+      0.5306456089019775,
+      0.5367052555084229,
+      0.5261166095733643,
+      0.5016065835952759,
+      0.5048404932022095,
+      0.48246413469314575,
+      0.48287686705589294,
+      0.4730610251426697
+    ],
+    "centered_consecutive_sims": [
+      0.7954291105270386,
+      -0.4273402690887451,
+      0.8306567668914795,
+      0.8572384715080261,
+      0.7690305709838867,
+      0.8506078720092773,
+      0.8605660200119019,
+      0.9048433899879456,
+      0.9441311955451965,
+      0.9291534423828125,
+      0.8947072625160217
+    ],
+    "centered_init_sims": [
+      0.9999997615814209,
+      0.7954291105270386,
+      -0.7981100082397461,
+      -0.897674560546875,
+      -0.8595477342605591,
+      -0.9355828762054443,
+      -0.8989947438240051,
+      -0.9460026621818542,
+      -0.9327887892723083,
+      -0.9311075210571289,
+      -0.932059109210968,
+      -0.8748367428779602
+    ],
+    "trajectory_2d": [
+      [
+        293.40545654296875,
+        -3.979124069213867
+      ],
+      [
+        26.806808471679688,
+        15.233136177062988
+      ],
+      [
+        -26.185945510864258,
+        17.766315460205078
+      ],
+      [
+        -27.050155639648438,
+        8.612472534179688
+      ],
+      [
+        -28.25615882873535,
+        11.776664733886719
+      ],
+      [
+        -29.63005256652832,
+        -0.4913519322872162
+      ],
+      [
+        -30.33475112915039,
+        -0.4929891526699066
+      ],
+      [
+        -33.796939849853516,
+        -3.8986058235168457
+      ],
+      [
+        -34.38626480102539,
+        -8.013418197631836
+      ],
+      [
+        -36.8026237487793,
+        -11.02505874633789
+      ],
+      [
+        -36.12971115112305,
+        -7.83618688583374
+      ],
+      [
+        -37.639583587646484,
+        -17.651836395263672
+      ]
+    ],
+    "explained_variance": [
+      0.9727058410644531,
+      0.01351527776569128
+    ],
+    "metadata": {
+      "count": 10,
+      "frequency": 0.5,
+      "seed": 9,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c10_f0.5_s9_d24.0_total_transitions_s114212.mp4",
+    "cohort": "cohort_B",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the total number of color changes.\n\nThe video starts at 0.0 seconds with a **green** circle.\n\n- At 0.0 seconds: Green\n- At 0.3 seconds: Changes to **yellow** \u2192 1st color change\n- At 0.5 seconds: Changes back to **green** \u2192 2nd color change\n- At 0.6 seconds: Changes to **orange** \u2192 3rd color change\n- At 0.8 seconds: Changes back to **yellow** \u2192 4th color change\n- At 1.0 seconds: Changes back to **orange** \u2192 5th color change\n- At 1.1 seconds: Changes to **teal** \u2192 6th color change\n- At 1.3 seconds: Changes back to **green** \u2192 7th color change\n- At 1.4 seconds: Changes to **orange** \u2192 8th color change\n- At 1.6 seconds: Changes back to **teal** \u2192 9th color change\n- At 1.7 seconds: Changes to **light green** \u2192 10th color change\n- At 1.9 seconds: Changes to **yellow** \u2192 11th color change\n\nEach time the circle changes color, it counts as one color change.\n\nSo, we have 11 color changes in total.\n\nFinal answer: $\\boxed{11}$"
+  },
+  {
+    "consecutive_sims": [
+      0.6654644012451172,
+      0.9697846174240112,
+      0.9895907640457153,
+      0.9887937903404236,
+      0.9918174743652344,
+      0.978522777557373,
+      0.9885588884353638,
+      0.9865149259567261,
+      0.9873252511024475,
+      0.9863364696502686,
+      0.9867750406265259
+    ],
+    "init_sims": [
+      1.0000001192092896,
+      0.6654644012451172,
+      0.5038807988166809,
+      0.49745655059814453,
+      0.48339468240737915,
+      0.4727904498577118,
+      0.4667704105377197,
+      0.4650348722934723,
+      0.44986000657081604,
+      0.4289668798446655,
+      0.42580658197402954,
+      0.41868728399276733
+    ],
+    "centered_consecutive_sims": [
+      -0.3020328879356384,
+      0.5896058678627014,
+      0.9118444919586182,
+      0.9153608679771423,
+      0.9406648874282837,
+      0.8681188821792603,
+      0.9344976544380188,
+      0.9294832944869995,
+      0.9459906220436096,
+      0.9398911595344543,
+      0.944542407989502
+    ],
+    "centered_init_sims": [
+      0.9999999403953552,
+      -0.3020328879356384,
+      -0.879509687423706,
+      -0.9464963674545288,
+      -0.9163782596588135,
+      -0.9510416388511658,
+      -0.9375324845314026,
+      -0.9591968655586243,
+      -0.9425469636917114,
+      -0.9356347918510437,
+      -0.943695068359375,
+      -0.9269817471504211
+    ],
+    "trajectory_2d": [
+      [
+        389.6184997558594,
+        -2.301469564437866
+      ],
+      [
+        -6.778128147125244,
+        19.059507369995117
+      ],
+      [
+        -31.68732261657715,
+        15.323987007141113
+      ],
+      [
+        -33.75456619262695,
+        7.644942283630371
+      ],
+      [
+        -34.55399703979492,
+        9.891791343688965
+      ],
+      [
+        -36.677127838134766,
+        5.035672664642334
+      ],
+      [
+        -38.04869079589844,
+        -3.400810956954956
+      ],
+      [
+        -38.290679931640625,
+        -4.158020973205566
+      ],
+      [
+        -40.63882827758789,
+        -9.537115097045898
+      ],
+      [
+        -42.8323860168457,
+        -12.57975959777832
+      ],
+      [
+        -42.573516845703125,
+        -10.461563110351562
+      ],
+      [
+        -43.783424377441406,
+        -14.517183303833008
+      ]
+    ],
+    "explained_variance": [
+      0.9846597909927368,
+      0.008172722533345222
+    ],
+    "metadata": {
+      "count": 5,
+      "frequency": 3.0,
+      "seed": 3,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c5_f3.0_s3_d24.0_total_transitions_s83212.mp4",
+    "cohort": "cohort_C",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At **0.0 seconds**, the circle is **light blue**.\n- At **0.1 seconds**, the circle changes to **pink**. \u2192 This is the **first color change**.\n- At **0.2 seconds**, the circle changes to **light blue** again. \u2192 This is the **second color change**.\n- At **0.3 seconds**, the circle changes to **magenta** (a shade of pink). \u2192 This is the **third color change**.\n- From **0.4 seconds to 1.9 seconds**, the circle remains **magenta**. \u2192 No further color changes.\n\nSo, we have three distinct color changes:\n1. Light blue \u2192 Pink\n2. Pink \u2192 Light blue\n3. Light blue \u2192 Magenta\n\nTherefore, the total number of color changes is **3**.\n\n\\boxed{3}"
+  },
+  {
+    "consecutive_sims": [
+      0.5524393320083618,
+      0.9872329235076904,
+      0.9892832636833191,
+      0.9843610525131226,
+      0.9871159791946411,
+      0.9829551577568054,
+      0.9779223203659058,
+      0.9850629568099976,
+      0.9853208065032959,
+      0.9892972707748413
+    ],
+    "init_sims": [
+      0.9999998807907104,
+      0.5524393320083618,
+      0.528561532497406,
+      0.5388126373291016,
+      0.5124825239181519,
+      0.5232947468757629,
+      0.49628520011901855,
+      0.5160002708435059,
+      0.48167383670806885,
+      0.457555890083313,
+      0.4512033760547638
+    ],
+    "centered_consecutive_sims": [
+      -0.8092661499977112,
+      0.8681087493896484,
+      0.8935216665267944,
+      0.84466153383255,
+      0.8697155714035034,
+      0.8422196507453918,
+      0.7991016507148743,
+      0.8885921835899353,
+      0.91438889503479,
+      0.9452247619628906
+    ],
+    "centered_init_sims": [
+      0.9999999403953552,
+      -0.8092661499977112,
+      -0.8550704121589661,
+      -0.8866252899169922,
+      -0.8802392482757568,
+      -0.9445381760597229,
+      -0.8870559334754944,
+      -0.9220360517501831,
+      -0.935426652431488,
+      -0.9036254286766052,
+      -0.9089036583900452
+    ],
+    "trajectory_2d": [
+      [
+        311.7781677246094,
+        -1.1919105052947998
+      ],
+      [
+        -24.64720916748047,
+        12.722126960754395
+      ],
+      [
+        -27.94135284423828,
+        13.689349174499512
+      ],
+      [
+        -27.449739456176758,
+        11.448648452758789
+      ],
+      [
+        -29.47291374206543,
+        7.731590270996094
+      ],
+      [
+        -29.749549865722656,
+        2.035411834716797
+      ],
+      [
+        -31.311996459960938,
+        -3.64302396774292
+      ],
+      [
+        -31.079833984375,
+        -5.452754020690918
+      ],
+      [
+        -34.33462905883789,
+        -7.771071910858154
+      ],
+      [
+        -37.44334030151367,
+        -15.340866088867188
+      ],
+      [
+        -38.347713470458984,
+        -14.227494239807129
+      ]
+    ],
+    "explained_variance": [
+      0.9780845642089844,
+      0.00992544274777174
+    ],
+    "metadata": {
+      "count": 8,
+      "frequency": 3.5,
+      "seed": 3,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c8_f3.5_s3_d24.0_total_transitions_s118212.mp4",
+    "cohort": "cohort_C",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n1. At **0.0 seconds**, the circle is **green**.\n2. At **0.1 seconds**, the circle changes to **teal** (a shade of blue-green). \u2192 This is the **first color change**.\n3. At **0.2 seconds**, the circle changes to **blue**. \u2192 This is the **second color change**.\n4. At **0.3 seconds**, the circle changes back to **green**. \u2192 This is the **third color change**.\n5. From **0.4 seconds to 1.9 seconds**, the circle remains **green** and does not change color.\n\nSo, we have three distinct color changes:\n- Green \u2192 Teal\n- Teal \u2192 Blue\n- Blue \u2192 Green\n\nTherefore, the total number of color changes is 3.\n\n\\boxed{3}"
+  },
+  {
+    "consecutive_sims": [
+      0.4995565414428711,
+      0.9823398590087891,
+      0.9833887815475464,
+      0.9864692091941833,
+      0.9761016964912415,
+      0.9911515712738037,
+      0.9790734648704529,
+      0.9873877763748169,
+      0.9876512289047241,
+      0.9889645576477051
+    ],
+    "init_sims": [
+      1.0,
+      0.4995565414428711,
+      0.48633551597595215,
+      0.4891146421432495,
+      0.4731113016605377,
+      0.4661213159561157,
+      0.4553385078907013,
+      0.42635855078697205,
+      0.4406922161579132,
+      0.42289310693740845,
+      0.41461360454559326
+    ],
+    "centered_consecutive_sims": [
+      -0.8152883052825928,
+      0.8778148889541626,
+      0.8902357816696167,
+      0.9155189394950867,
+      0.8597140312194824,
+      0.953063428401947,
+      0.9104962944984436,
+      0.9505383372306824,
+      0.9530028104782104,
+      0.9598796367645264
+    ],
+    "centered_init_sims": [
+      0.9999997615814209,
+      -0.8152883052825928,
+      -0.8727070689201355,
+      -0.9640759825706482,
+      -0.932904064655304,
+      -0.9608297348022461,
+      -0.9718456864356995,
+      -0.9438027143478394,
+      -0.9655194878578186,
+      -0.9431061148643494,
+      -0.9474332928657532
+    ],
+    "trajectory_2d": [
+      [
+        413.53900146484375,
+        -1.1244463920593262
+      ],
+      [
+        -33.49238204956055,
+        20.789161682128906
+      ],
+      [
+        -36.467803955078125,
+        17.968273162841797
+      ],
+      [
+        -37.644588470458984,
+        4.756694793701172
+      ],
+      [
+        -38.90943908691406,
+        8.85189151763916
+      ],
+      [
+        -40.77418899536133,
+        -2.385801315307617
+      ],
+      [
+        -42.10133743286133,
+        -3.539830446243286
+      ],
+      [
+        -45.97007369995117,
+        -10.756531715393066
+      ],
+      [
+        -44.4780387878418,
+        -8.263553619384766
+      ],
+      [
+        -46.49174499511719,
+        -13.537464141845703
+      ],
+      [
+        -47.20918655395508,
+        -12.758414268493652
+      ]
+    ],
+    "explained_variance": [
+      0.986980140209198,
+      0.007366667967289686
+    ],
+    "metadata": {
+      "count": 6,
+      "frequency": 3.5,
+      "seed": 9,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c6_f3.5_s9_d24.0_total_transitions_s104212.mp4",
+    "cohort": "cohort_C",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the video frame by frame to count the number of color changes.\n\n- At **0.0 seconds**, the circle is **purple**.\n- At **0.1 seconds**, the circle changes to **pink**. \u2192 This is the **first color change**.\n- At **0.2 seconds**, the circle changes back to **purple**. \u2192 This is the **second color change**.\n- At **0.3 seconds**, the circle changes to **blue**. \u2192 This is the **third color change**.\n- From **0.4 seconds to 1.9 seconds**, the circle remains **blue**. \u2192 No further changes.\n\nSo, the color changes occurred at:\n1. 0.1 seconds (purple \u2192 pink)\n2. 0.2 seconds (pink \u2192 purple)\n3. 0.3 seconds (purple \u2192 blue)\n\nThat\u2019s a total of **3** color changes.\n\n\\boxed{3}"
+  },
+  {
+    "consecutive_sims": [
+      0.5399986505508423,
+      0.9880906939506531,
+      0.9857065081596375,
+      0.9899457693099976,
+      0.9911696910858154,
+      0.9868547320365906,
+      0.9823150634765625,
+      0.9884910583496094,
+      0.9816902875900269,
+      0.9898833632469177
+    ],
+    "init_sims": [
+      1.000000238418579,
+      0.5399986505508423,
+      0.520818293094635,
+      0.5197165608406067,
+      0.5156388282775879,
+      0.5112832188606262,
+      0.48024651408195496,
+      0.4977501630783081,
+      0.4950069785118103,
+      0.4546200931072235,
+      0.44753897190093994
+    ],
+    "centered_consecutive_sims": [
+      -0.8166345953941345,
+      0.8855757713317871,
+      0.8648679852485657,
+      0.8996912837028503,
+      0.9051793813705444,
+      0.8957235217094421,
+      0.8616235852241516,
+      0.9147548675537109,
+      0.8988922834396362,
+      0.9477954506874084
+    ],
+    "centered_init_sims": [
+      1.0000001192092896,
+      -0.8166345953941345,
+      -0.8563026785850525,
+      -0.9039731025695801,
+      -0.9002758860588074,
+      -0.9487979412078857,
+      -0.9069664478302002,
+      -0.9445977807044983,
+      -0.9336315393447876,
+      -0.908501386642456,
+      -0.9107919931411743
+    ],
+    "trajectory_2d": [
+      [
+        322.77740478515625,
+        -1.0469038486480713
+      ],
+      [
+        -26.41444969177246,
+        13.408988952636719
+      ],
+      [
+        -28.7148494720459,
+        14.193814277648926
+      ],
+      [
+        -29.722414016723633,
+        9.922998428344727
+      ],
+      [
+        -29.34505271911621,
+        7.340882301330566
+      ],
+      [
+        -31.524633407592773,
+        1.6193280220031738
+      ],
+      [
+        -33.77553176879883,
+        -5.017801761627197
+      ],
+      [
+        -33.115379333496094,
+        -6.496840000152588
+      ],
+      [
+        -33.62845230102539,
+        -4.678736209869385
+      ],
+      [
+        -37.946598052978516,
+        -14.71966552734375
+      ],
+      [
+        -38.589908599853516,
+        -14.526076316833496
+      ]
+    ],
+    "explained_variance": [
+      0.9802423119544983,
+      0.009006720967590809
+    ],
+    "metadata": {
+      "count": 8,
+      "frequency": 3.5,
+      "seed": 4,
+      "duration": 24.0
+    },
+    "video_name": "sweep_total_transitions_c8_f3.5_s4_d24.0_total_transitions_s119212.mp4",
+    "cohort": "cohort_C",
+    "prompt": "How many color changes occurred in total? Show your reasoning step-by-step and put the final numeric count in \\boxed{}.",
+    "generated_response": "Let's analyze the sequence of color changes step by step:\n\n1. At **0.0 seconds**, the circle is **blue-green** (a teal-like color).\n2. At **0.1 seconds**, the circle changes to **purple**.\n3. At **0.2 seconds**, the circle changes to **red** (specifically, a coral or salmon pink shade).\n4. From **0.3 seconds to 1.9 seconds**, the circle remains **red** without any further changes.\n\nNow, count the number of **color changes**:\n- From blue-green to purple \u2192 1st change\n- From purple to red \u2192 2nd change\n- From red to... nothing (remains red) \u2192 no additional change\n\nThus, there are **2** color changes in total.\n\nFinal Answer: $\\boxed{2}$"
+  }
+]
