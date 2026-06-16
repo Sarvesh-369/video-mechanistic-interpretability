@@ -70,6 +70,31 @@ After running the synchronized script, the results across all three domains and 
 2. **Zero Visual Attention:** The sum of attention weights to the visual tokens (`sum_val`) was exactly `0.0`, triggering the uniform fallback in the script's normalization logic. This indicates that the prompt-end query token's raw logits to all 588 visual tokens were extremely negative, underflowing to absolute zero ($<10^{-38}$ in `bfloat16`/`float32`).
 3. **Text-Centric Attention Sinks:** The model's query token at index `-1` completely disconnects from the visual tokens in the late layers, focusing its attention mass exclusively on local text tokens (the preceding prompt instruction) and system attention sinks (such as `<|im_start|>`).
 
+##### Visual Attention Heatmap Profiles:
+Below are the actual attention maps plotted for a successful Cohort A video and a failing Cohort B video in the Blinking domain:
+
+![Blinking Attention Map - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp1/blinking/direct/cohort_A_sweep_count_blinks_c2_f0.5_s9_d24.0_count_blinks_attn.png)
+*Figure 1.1: Attention map for Cohort A (Success, GT=2) under Direct mode. The left panel shows attention entropy across layers, peaking at maximum possible uniform entropy (represented by the red dashed line). The right panel shows the temporal attention weights across layers. Because of the absolute disconnect, the attention weights back to the 588 visual tokens are exactly zero, resulting in a perfectly flat, uniform distribution at all layers.*
+
+![Blinking Attention Map - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp1/blinking/direct/cohort_B_sweep_count_blinks_c5_f0.5_s2_d24.0_count_blinks_attn.png)
+*Figure 1.2: Attention map for Cohort B (Trap, GT=5) under Direct mode. Identical to the successful run, the attention weights are exactly zero, showing that the VLM remains completely disconnected from the visual features regardless of the actual event count in the video.*
+
+Below are the attention maps for the Bounce Ball domain:
+
+![Bounce Ball Attention Map - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp1/bounce_ball/direct/cohort_A_sweep_count_bounces_c2_f0.5_s9_d24.0_count_bounces_attn.png)
+*Figure 1.3: Attention map for Bounce Ball Cohort A (Success, GT=2) under Direct mode. The attention weights to visual tokens are exactly zero, leading to a perfectly uniform attention distribution (entropy equals the maximum log ceiling) at all layers.*
+
+![Bounce Ball Attention Map - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp1/bounce_ball/direct/cohort_B_sweep_count_bounces_c5_f0.5_s2_d24.0_count_bounces_attn.png)
+*Figure 1.4: Attention map for Bounce Ball Cohort B (Trap, GT=5) under Direct mode. The profile is identical to the successful cohort, confirming that the query token's visual attention is completely disconnected regardless of sequence length or event counts.*
+
+Below are the attention maps for the State Machine domain:
+
+![State Machine Attention Map - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp1/state_machine/direct/cohort_A_sweep_total_transitions_c2_f0.5_s9_d24.0_total_transitions_s34212_attn.png)
+*Figure 1.5: Attention map for State Machine Cohort A (Success, GT=2) under Direct mode. Shows the same flat profile of maximum uniform entropy across layers due to visual attention underflow.*
+
+![State Machine Attention Map - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp1/state_machine/direct/cohort_B_sweep_total_transitions_c5_f0.5_s2_d24.0_total_transitions_s57212_attn.png)
+*Figure 1.6: Attention map for State Machine Cohort B (Trap, GT=5) under Direct mode. Identical flat profile, verifying that visual attention weights are entirely zero across all transformer layers.*
+
 #### 4. Conclusion
 **Experiment 1 strongly supports Hypothesis A (Temporal Attention Disconnect).** In the late layers of the transformer, the query token that decodes the answer is completely blind to the visual sequence, as all visual attention weights underflow to zero.
 
@@ -118,12 +143,40 @@ graph TD
 *   **Blinking Domain:**
     *   *Success Cohort A:* Mean-centered consecutive similarity drops sharply to **$-0.34$** exactly at the flash frame, showing that the model registers a clear state boundary. PCA trajectories show two widely separated clusters corresponding to `ON` and `OFF`.
     *   *Trap Cohort B:* The similarity drops disappear for later flashes, and the consecutive similarity flattens out near $0.90+$. The PCA trajectory spirals inward, collapsing into a tight, homogeneous point. Later flashes are represented identically to the background `ON` state.
+
+##### Visual Representation Similarity & Trajectory Plots (Blinking Domain):
+Below are the representation analysis plots for a successful Cohort A video (GT=2) and a failing Cohort B video (GT=5):
+
+![Blinking Representations - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp2/blinking/direct/cohort_A_sweep_count_blinks_c2_f0.5_s9_d24.0_count_blinks_repr.png)
+*Figure 2.1: Penultimate layer (Layer -2) representation analysis for Cohort A (Success, GT=2). The left panel plots the raw consecutive cosine similarity (green line, left axis, flat anisotropy near 0.98+) and the mean-centered consecutive correlation (blue line, right axis). The mean-centered correlation drops sharply to $-0.34$ exactly at the flash frame, representing a clear state transition boundary. The right panel shows the 2D PCA trajectory: the ON and OFF states map to widely separated, distinct clusters, allowing the model to behaviorally decode the count.*
+
+![Blinking Representations - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp2/blinking/direct/cohort_B_sweep_count_blinks_c5_f0.5_s2_d24.0_count_blinks_repr.png)
+*Figure 2.2: Penultimate layer (Layer -2) representation analysis for Cohort B (Trap, GT=5). The left panel shows that the mean-centered correlation drops diminish for later flashes and flatten out near $0.90+$. The right panel shows the PCA trajectory spiraling inward and collapsing into a single tight cluster, indicating that the representation of later flashes has collapsed into the background ON state.*
 *   **Bounce Ball Domain:**
     *   *Success Cohort A:* Shows clear periodic similarity oscillations matching the ball's bouncing frequency. PCA displays a clean, linear, back-and-forth trajectory representing space.
     *   *Trap Cohort B:* The oscillation structure disappears. Ball coordinates are smoothed out, and consecutive similarity flattens. PCA trajectories drift and collapse into a singular fuzzy cluster.
+
+##### Visual Representation Similarity & Trajectory Plots (Bounce Ball Domain):
+Below are the representation analysis plots for a successful Cohort A video (GT=2) and a failing Cohort B video (GT=5) in the Bounce Ball domain:
+
+![Bounce Ball Representations - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp2/bounce_ball/direct/cohort_A_sweep_count_bounces_c2_f0.5_s9_d24.0_count_bounces_repr.png)
+*Figure 2.3: Penultimate layer (Layer -2) representation analysis for Bounce Ball Cohort A (Success, GT=2). The left panel plots the similarity metrics showing clear periodic oscillations corresponding to the ball contacting the boundary walls. The right panel shows the PCA trajectory mapping a structured, open, and separated linear path representing the physical back-and-forth motion.*
+
+![Bounce Ball Representations - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp2/bounce_ball/direct/cohort_B_sweep_count_bounces_c5_f0.5_s2_d24.0_count_bounces_repr.png)
+*Figure 2.4: Penultimate layer (Layer -2) representation analysis for Bounce Ball Cohort B (Trap, GT=5). The similarity oscillations diminish and flatten out, and the PCA trajectory collapses into a tight, fuzzy cluster, indicating the model loses spatial tracking of the ball in later frames.*
+
 *   **State Machine Domain:**
     *   *Success Cohort A:* Strong color contrast yields massive drop-offs in consecutive similarity (down to **$-0.60$**). PCA maps out two distinct loops representing the `Warm` and `Cool` color states.
     *   *Trap Cohort B:* Although color states are the most resilient due to pixel-level color dominance, long-sequence lengths compress the distance between states in PCA space, causing representational drift.
+
+##### Visual Representation Similarity & Trajectory Plots (State Machine Domain):
+Below are the representation analysis plots for a successful Cohort A video (GT=2) and a failing Cohort B video (GT=5) in the State Machine domain:
+
+![State Machine Representations - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp2/state_machine/direct/cohort_A_sweep_total_transitions_c2_f0.5_s9_d24.0_total_transitions_s34212_repr.png)
+*Figure 2.5: Penultimate layer (Layer -2) representation analysis for State Machine Cohort A (Success, GT=2). The left panel plots a sharp drops in mean-centered correlation (down to -0.60) at transitions. The right panel shows two widely separated, distinct clusters in PCA space corresponding to Warm and Cool color states.*
+
+![State Machine Representations - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp2/state_machine/direct/cohort_B_sweep_total_transitions_c5_f0.5_s2_d24.0_total_transitions_s57212_repr.png)
+*Figure 2.6: Penultimate layer (Layer -2) representation analysis for State Machine Cohort B (Trap, GT=5). The transition boundaries shrink and representational drift compresses the distance between Warm and Cool states in the PCA space.*
 
 #### 5. Conclusion
 **Experiment 2 strongly confirms Hypothesis B (Representational Collapse).** The visual representations of event states physically smooth out and collapse in the penultimate layers of the model when sequence lengths are long.
@@ -164,6 +217,18 @@ We trained a Logistic Regression classifier (linear probe) on the Layer `-2` hid
     *   **Class `Cool (GREEN/BLUE)`:** **F1-score = 0.5588** (Precision = 54.29%, Recall = 57.58%, Support = 33.0)
     *   **Class `Warm (RED/YELLOW)`:** **F1-score = 0.4643** (Precision = 48.15%, Recall = 44.83%, Support = 29.0)
 *   *Interpretation:* Probing accuracy collapses to **51.61%** (pure random guessing), demonstrating complete loss of the color state feature representation.
+
+##### Visual Probe Prediction Trajectory Plots:
+Below are the linear probe state prediction trajectories plotted against the ground truth events for failing Cohort B runs in each domain:
+
+![Blinking Domain Probe Predictions](/Users/sarvesh/Documents/low-frequency-trap/results/exp3/blinking/sweep_count_blinks_c6_f0.5_s9_d24.0_count_blinks_probe.png)
+*Figure 3.1: Linear probe state predictions for a Blinking Cohort B video (GT=6, FPS=0.5). The green line tracks the classifier's predicted probability of the event state (OFF). As representational collapse sets in, the classifier's predicted probability remains near zero during later flashes, failing to detect them and classifying them as the background ON state.*
+
+![Bounce Ball Domain Probe Predictions](/Users/sarvesh/Documents/low-frequency-trap/results/exp3/bounce_ball/sweep_count_bounces_c6_f0.5_s9_d24.0_count_bounces_probe.png)
+*Figure 3.2: Linear probe predictions for a Bounce Ball Cohort B video (GT=6, FPS=0.5). The classifier's predictions for Wall A and Wall B contact states collapse in later frames, showing that the boundary contact events are no longer linearly separable from the background representations.*
+
+![State Machine Domain Probe Predictions](/Users/sarvesh/Documents/low-frequency-trap/results/exp3/state_machine/sweep_total_transitions_c6_f0.5_s9_d24.0_total_transitions_s74212_probe.png)
+*Figure 3.3: Linear probe predictions for a State Machine Cohort B video (GT=6, FPS=0.5). The classifier's ability to distinguish Cool vs Warm states completely degrades in the second half of the sequence, verifying the loss of the color state feature representation.*
 
 #### 4. Conclusion
 The linear probing experiments provide **unequivocal confirmation of Hypothesis B**. The model behaviorally fails because it becomes perceptually "blind" to later events in the representation space.
@@ -249,6 +314,33 @@ We tracked the intermediate hidden representations $h_L$ at every layer $L \in [
 | **Bounce Ball Cohort B** (GT=5) | `"5"` | **0.13%** | `"3"` | **53.13%** |
 | **State Machine Cohort A** (GT=2) | `"2"` | **100.00%** | - | 0.00% |
 | **State Machine Cohort B** (GT=5) | `"5"` | **78.52%** | `"4"` | 17.48% |
+
+##### Logit Lens Probability Trajectory Plots (Blinking Domain):
+Below are the logit lens vocabulary projections across layers for a successful Cohort A video (GT=2) and a failing Cohort B video (GT=5):
+
+![Blinking Logit Lens - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp5/blinking/direct/cohort_A_sweep_count_blinks_c2_f0.5_s9_d24.0_count_blinks_logit_lens.png)
+*Figure 5.1: Logit lens vocabulary projections across layers for Cohort A (Success, GT=2) in Direct mode. The left panel shows the probabilities on a linear scale, where the correct count token `"2"` (blue line) surges to 97.26% in the final layer. The right panel plots the probabilities on a log scale, demonstrating that the correct token dominates starting from Layer 33, while the under-counted alternative `"3"` stays below 2%.*
+
+![Blinking Logit Lens - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp5/blinking/direct/cohort_B_sweep_count_blinks_c5_f0.5_s2_d24.0_count_blinks_logit_lens.png)
+*Figure 5.2: Logit lens vocabulary projections across layers for Cohort B (Trap, GT=5) in Direct mode. The left panel shows that the correct token `"5"` collapses to 0.08% probability, while the under-counted alternative `"3"` (green line) surges to dominate at 23.83% in the final layer. The log scale in the right panel shows that `"3"` begins its rise as early as Layer 33, highlighting the cognitive attractor bias.*
+
+##### Logit Lens Probability Trajectory Plots (Bounce Ball Domain):
+Below are the logit lens vocabulary projections across layers for a successful Cohort A video (GT=2) and a failing Cohort B video (GT=5) in the Bounce Ball domain:
+
+![Bounce Ball Logit Lens - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp5/bounce_ball/direct/cohort_A_sweep_count_bounces_c2_f0.5_s9_d24.0_count_bounces_logit_lens.png)
+*Figure 5.3: Logit lens vocabulary projections across layers for Bounce Ball Cohort A (Success, GT=2) in Direct mode. The correct token "2" surges to 95.31% in the final layer.*
+
+![Bounce Ball Logit Lens - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp5/bounce_ball/direct/cohort_B_sweep_count_bounces_c5_f0.5_s2_d24.0_count_bounces_logit_lens.png)
+*Figure 5.4: Logit lens vocabulary projections across layers for Bounce Ball Cohort B (Trap, GT=5) in Direct mode. The correct token "5" collapses to 0.13%, while the under-counted cognitive attractor "3" dominates at 53.13% in the final layer.*
+
+##### Logit Lens Probability Trajectory Plots (State Machine Domain):
+Below are the logit lens vocabulary projections across layers for a successful Cohort A video (GT=2) and a failing Cohort B video (GT=5) in the State Machine domain:
+
+![State Machine Logit Lens - Cohort A (GT=2)](/Users/sarvesh/Documents/low-frequency-trap/results/exp5/state_machine/direct/cohort_A_sweep_total_transitions_c2_f0.5_s9_d24.0_total_transitions_s34212_logit_lens.png)
+*Figure 5.5: Logit lens vocabulary projections across layers for State Machine Cohort A (Success, GT=2) in Direct mode. The correct token "2" reaches 100.00% in the final layer.*
+
+![State Machine Logit Lens - Cohort B (GT=5)](/Users/sarvesh/Documents/low-frequency-trap/results/exp5/state_machine/direct/cohort_B_sweep_total_transitions_c5_f0.5_s2_d24.0_total_transitions_s57212_logit_lens.png)
+*Figure 5.6: Logit lens vocabulary projections across layers for State Machine Cohort B (Trap, GT=5) in Direct mode. The correct token "5" is more resilient at 78.52% probability, but the alternative under-counted token "4" rises to 17.48% in the final layer.*
 
 *Note: In CoT mode, the logit lens probabilities for digits collapse to $\sim 10^{-11}$ at the end of the prompt because the query token must predict the next text token in the reasoning chain (e.g., `"Let"`), not the final digit.*
 
