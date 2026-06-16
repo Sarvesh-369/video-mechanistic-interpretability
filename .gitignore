@@ -6,7 +6,7 @@ videos/
 *.avi
 *.mkv
 *.webm
-
+*.zip
 # PDF files (papers, etc.)
 *.pdf
 
