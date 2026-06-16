@@ -83,3 +83,13 @@ We test the **Temporal Interpolation Hypothesis**: Does the model fail because i
     *   **Cohort B (Trap case):** The model may start with the correct count in early/middle layers, but late layers project to under-counted vocabulary tokens (or vice versa), locating the exact layer depth of representation corruption.
 *   **The Story:**
     *   The Logit Lens is the final chapter of our story. It acts as an X-ray, pinpointing the exact layer depth where the model's internal bookkeeping ledger is corrupted and replaced by an under-counted answer.
+
+---
+
+## The Story's Resolution: Synthesis of the Low-Frequency Trap
+
+Our 5 experiments paint a unified picture of the VLM's behavior:
+1. **Spatio-Temporal Attention Disconnect (Experiment 1):** The model's final query token fails to route attention back to any visual features in the deeper layers. Attention weights underflow to zero, causing a flat maximum-entropy distribution.
+2. **Visual Representation Collapse (Experiments 2 & 3):** Even within the visual representation pipeline itself, the distinct features of sequential events drift and collapse into a singular background cluster. A linear probe trained on healthy states fails completely to separate later event frames, proving the model is visually blind to later events.
+3. **Logit Lens Attractor Dynamics (Experiment 5):** When these collapsed representations project to the output, the model falls back to a strong low-frequency cognitive counting attractor (frequently defaulting to predicting `"3"`).
+4. **Behavioral Rescue (Experiment 4):** By bypassing long reasoning chains (which cause severe representational drift during text generation) and increasing temporal frame rate sampling, we can successfully rescue the model's performance on boundary sequences, proving the trap is an interactable bottleneck of VLM architectures.
