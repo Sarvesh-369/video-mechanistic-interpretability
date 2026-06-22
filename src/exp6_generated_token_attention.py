@@ -11,17 +11,16 @@ class HookState:
         self.query_pos = -1
         self.captured = {}
 
-def get_hook_fn(layer_idx, state, start_idx, end_idx):
+def get_hook_fn(layer_idx, state):
     def hook_fn(module, input_args, output):
         if isinstance(output, tuple) and len(output) > 1 and output[1] is not None:
             attn_weights = output[1] # Shape: (batch_size, num_heads, query_len, seq_len)
-            # Slice attention from current query position back to visual token indices
-            sliced = attn_weights[:, :, state.query_pos, start_idx:end_idx].detach().clone().cpu()
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
-            state.captured[layer_idx] = sliced
             
-            # In-place release to prevent OOM
+            # Average over heads immediately on GPU to save memory and CPU transfer bandwidth
+            mean_heads = torch.mean(attn_weights, dim=1).detach().cpu().float()
+            state.captured[layer_idx] = mean_heads
+            
+            # In-place release of the massive attention weights to prevent OOM
             dummy = torch.zeros(1, 1, 1, 1, device=attn_weights.device, dtype=attn_weights.dtype)
             attn_weights.set_(dummy)
             new_output = list(output)
@@ -83,16 +82,17 @@ def load_video_frames(video_path, num_target_frames):
     print("Warning: Could not read video frames using decord, torchvision, or cv2. Using dummy frames.")
     return [np.ones((224, 224, 3), dtype=np.uint8) * 255 for _ in range(num_target_frames)]
 
-def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
+def run_generated_token_attention_rollout(model, inputs, processor, max_new_tokens=60):
     """
     Runs custom autoregressive generation with KV caching and hooks
-    to extract visual attention heatmaps (both spatial and temporal)
-    for each generated token.
+    to compute the formal Causal Attention Rollout mapping back to the
+    input visual tokens for each generated token.
     """
     device = next(model.parameters()).device
     tokenizer = processor.tokenizer
     
     input_ids = inputs["input_ids"][0]
+    prompt_len = input_ids.shape[0]
     
     # Locate visual tokens
     vocab = tokenizer.get_vocab()
@@ -107,6 +107,7 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
         
     start_idx = start_pos[0].item() + 1
     end_idx = end_pos[0].item()
+    V = end_idx - start_idx # Total visual tokens
     
     # Get grid information
     if "video_grid_thw" not in inputs:
@@ -117,7 +118,6 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
     T_out = max(1, T // 2)
     H_out = H // 2
     W_out = W // 2
-    expected_tokens = T_out * H_out * W_out
     
     # Locate attention modules
     attn_modules = []
@@ -140,24 +140,32 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
                 idx += 1
                 
     num_layers = len(attn_modules)
-    num_heads = getattr(model.config, "num_attention_heads", 32)
-    if hasattr(model.config, "text_config"):
-        num_heads = getattr(model.config.text_config, "num_attention_heads", 32)
-        
+    
     # Set up hook state
     state = HookState()
     hooks = []
     for layer_idx, module in attn_modules:
-        hook = module.register_forward_hook(get_hook_fn(layer_idx, state, start_idx, end_idx))
+        hook = module.register_forward_hook(get_hook_fn(layer_idx, state))
         hooks.append(hook)
         
-    all_step_spatial_attentions = [] # Will store list of shape: (steps, layers, T_out, H_out, W_out)
+    # Rollout tracking variables
+    # rollout_table stores visual rollout values on CPU for each token at each layer
+    # shape: (num_layers + 1, seq_len, V)
+    # We dynamically expand the seq_len dimension as tokens are generated.
+    rollout_table = np.zeros((num_layers + 1, prompt_len, V))
+    
+    # Layer 0 Initialization: Visual tokens are initialized as one-hot arrays mapping to themselves
+    for k in range(prompt_len):
+        if start_idx <= k < end_idx:
+            rollout_table[0, k, k - start_idx] = 1.0
+            
+    all_step_spatial_rollouts = [] # Will store visual rollout heatmaps: (steps, layers, T_out, H_out, W_out)
     generated_token_strs = []
     
     try:
         # Step 0: Prefill (First forward pass)
         print("    Running prefill pass...")
-        state.query_pos = -1 # Query of the last token in prompt
+        state.query_pos = slice(None) # Capture attention between all prompt tokens
         state.captured.clear()
         
         with torch.no_grad():
@@ -167,17 +175,23 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
         next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
         generated_token_strs.append("<prefill>")
         
-        # Pool spatial and temporal prefill attention
-        prefill_layers = []
-        for layer in range(num_layers):
-            sliced = state.captured[layer][0].float().numpy() # shape: (num_heads, V)
-            if sliced.shape[1] == expected_tokens:
-                reshaped = sliced.reshape(num_heads, T_out, H_out, W_out)
-                mean_heads = np.mean(reshaped, axis=0) # shape: (T_out, H_out, W_out)
-                prefill_layers.append(mean_heads)
-            else:
-                prefill_layers.append(np.ones((T_out, H_out, W_out)) / expected_tokens)
-        all_step_spatial_attentions.append(prefill_layers)
+        # Calculate Rollout for all layers at Prefill stage
+        for l in range(1, num_layers + 1):
+            # A_l is the prompt attention matrix at layer l-1: shape (prompt_len, prompt_len)
+            A_l = state.captured[l-1][0].numpy()
+            
+            # Apply Rollout formulation: R_l = (0.5 * A_l + 0.5 * I) @ R_{l-1}
+            A_scaled = 0.5 * A_l + 0.5 * np.eye(prompt_len)
+            rollout_table[l] = A_scaled @ rollout_table[l-1]
+            
+        # Store Prefill visual rollout (last prompt token index -1)
+        prefill_rollouts = []
+        for l in range(1, num_layers + 1):
+            prefill_vector = rollout_table[l, -1, :] # shape: (V,)
+            reshaped = prefill_vector.reshape(T_out, H_out, W_out)
+            prefill_layers = np.array(reshaped)
+            prefill_rollouts.append(prefill_layers)
+        all_step_spatial_rollouts.append(prefill_rollouts)
         
         # Step 1+: Autoregressive generation steps
         stop_token_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
@@ -189,8 +203,16 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
             token_str = tokenizer.decode([next_token_id.item()])
             generated_token_strs.append(token_str)
             
+            # Expand the rollout table sequence length by 1 for the new token
+            current_len = rollout_table.shape[1]
+            new_rollout_table = np.zeros((num_layers + 1, current_len + 1, V))
+            new_rollout_table[:, :current_len, :] = rollout_table
+            # Initialize layer 0 for the new text token as zero
+            new_rollout_table[0, current_len, :] = 0.0
+            rollout_table = new_rollout_table
+            
             # Reset state for current single-token forward pass
-            state.query_pos = 0 # Length of new input_ids is 1
+            state.query_pos = 0 # Length of new input_ids query is 1
             state.captured.clear()
             
             single_inputs = {
@@ -205,20 +227,30 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
             past_key_values = outputs.past_key_values
             next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
             
-            # Pool spatial and temporal step attention
-            step_layers = []
-            for layer in range(num_layers):
-                if layer not in state.captured:
-                    step_layers.append(np.ones((T_out, H_out, W_out)) / expected_tokens)
+            # Update Causal Rollout for the new generated token (at index current_len)
+            for l in range(1, num_layers + 1):
+                if l-1 not in state.captured:
+                    # Fallback to copy from previous layer
+                    rollout_table[l, current_len, :] = rollout_table[l-1, current_len, :]
                     continue
-                sliced = state.captured[layer][0].float().numpy() # shape: (num_heads, V)
-                if sliced.shape[1] == expected_tokens:
-                    reshaped = sliced.reshape(num_heads, T_out, H_out, W_out)
-                    mean_heads = np.mean(reshaped, axis=0) # shape: (T_out, H_out, W_out)
-                    step_layers.append(mean_heads)
-                else:
-                    step_layers.append(np.ones((T_out, H_out, W_out)) / expected_tokens)
-            all_step_spatial_attentions.append(step_layers)
+                # Attention vector from the new token to all past tokens: shape (current_len + 1,)
+                A_l_step = state.captured[l-1][0, 0].numpy()
+                
+                # Causal Rollout equation:
+                # rollout[l, new] = (0.5 + 0.5 * A_self) * rollout[l-1, new] + 0.5 * sum(A_past * rollout[l-1, past])
+                self_attn = A_l_step[-1]
+                past_attn = A_l_step[:-1]
+                
+                rollout_table[l, current_len, :] = (0.5 + 0.5 * self_attn) * rollout_table[l-1, current_len, :] + \
+                                                   0.5 * (past_attn @ rollout_table[l-1, :current_len, :])
+                                                   
+            # Store rollout visual heatmap for the newly generated token at Layer 1 to L
+            step_rollouts = []
+            for l in range(1, num_layers + 1):
+                step_vector = rollout_table[l, current_len, :] # shape: (V,)
+                reshaped = step_vector.reshape(T_out, H_out, W_out)
+                step_rollouts.append(np.array(reshaped))
+            all_step_spatial_rollouts.append(step_rollouts)
             
             # Print token generated in progress
             print(f"      [Step {step+1}] Generated Token: {repr(token_str)}")
@@ -235,9 +267,8 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
         
     return {
         "generated_tokens": generated_token_strs,
-        "attentions": all_step_spatial_attentions, # shape: (steps, layers, T_out, H_out, W_out)
+        "attentions": all_step_spatial_rollouts, # shape: (steps, layers, T_out, H_out, W_out)
         "num_layers": num_layers,
-        "num_heads": num_heads,
         "T": T,
         "T_out": T_out,
         "H_out": H_out,
@@ -246,7 +277,7 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
 
 def plot_generated_token_temporal_heatmap(results, output_image_path, target_layer=-2, duration=24.0):
     """
-    Generates a 2D heatmap showing visual attention over video steps (x-axis)
+    Generates a 2D heatmap showing visual attention rollout over video steps (x-axis)
     across each generated token (y-axis) for a specified transformer layer.
     Plots exactly the T_out steps given to the decoder (no upscaling).
     """
@@ -283,16 +314,16 @@ def plot_generated_token_temporal_heatmap(results, output_image_path, target_lay
     
     ax.set_xlabel("Decoder Visual Steps (Seconds)", fontsize=10, fontweight='bold')
     ax.set_ylabel("Generated Tokens (Autoregressive Sequence)", fontsize=10, fontweight='bold')
-    ax.set_title(f"Dynamic Visual Attention per Generated Token (Layer {layer_idx}, T_out={T_out} steps)", fontsize=12, fontweight='bold')
+    ax.set_title(f"Dynamic Visual Attention Rollout per Generated Token (Layer {layer_idx}, T_out={T_out} steps)", fontsize=12, fontweight='bold')
     
-    fig.colorbar(im, ax=ax, label="Attention Weight")
+    fig.colorbar(im, ax=ax, label="Attention Flow")
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=300)
     plt.close()
 
 def plot_spatial_attention_for_token(results, token_idx, video_path, output_image_path, target_layer=-2, duration=24.0):
     """
-    Plots the spatial attention visual heatmaps across all video steps
+    Plots the spatial attention visual rollout heatmaps across all video steps
     for a specific generated token, overlaid on the original video frames.
     Plots exactly the T_out steps (no upscaling).
     """
@@ -340,7 +371,7 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
         
         # Plot original frame as background
         ax.imshow(background)
-        # Overlay attention heatmap with bilinear interpolation and transparency (alpha=0.5)
+        # Overlay attention rollout heatmap with bilinear interpolation and transparency (alpha=0.5)
         im = ax.imshow(spatial_map, cmap='jet', alpha=0.5, 
                       extent=[0, background.shape[1], background.shape[0], 0], 
                       interpolation='bilinear', vmin=vmin, vmax=vmax)
@@ -352,7 +383,7 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
     for idx in range(len(frame_indices), len(axes)):
         axes[idx].axis('off')
         
-    fig.suptitle(f"Spatial Visual Attention for Token [{token_idx}] '{token_str}' (Layer {layer_idx})", fontsize=12, fontweight='bold')
+    fig.suptitle(f"Visual Attention Rollout for Token [{token_idx}] '{token_str}' (Layer {layer_idx})", fontsize=12, fontweight='bold')
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=300)
     plt.close()
@@ -421,17 +452,17 @@ def main():
         print(f"\nProcessing Generated Token Attention for {video_name} (Mode: {args.prompt_mode.upper()}, 2.0 FPS)...")
         
         try:
-            results = run_generated_token_attention(model, inputs, processor, max_new_tokens=args.max_new_tokens)
+            results = run_generated_token_attention_rollout(model, inputs, processor, max_new_tokens=args.max_new_tokens)
             results["video_name"] = os.path.basename(video_path)
             results["prompt"] = question_text
             
-            # Save temporal attention shift plots (no upscaling)
+            # Save temporal attention rollout heatmaps (no upscaling)
             for target_layer in [-1, -2]:
                 out_img = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_layer{target_layer}_temporal_attention_shift.png")
                 plot_generated_token_temporal_heatmap(results, out_img, target_layer=target_layer, duration=duration)
-                print(f"    Saved temporal shift plot for Layer {target_layer} to {out_img}")
+                print(f"    Saved temporal rollout shift plot for Layer {target_layer} to {out_img}")
                 
-            # Plot spatial visual heatmaps overlaid on actual video frames
+            # Plot spatial visual rollout heatmaps overlaid on actual video frames
             tokens = results["generated_tokens"]
             print(f"    Generated {len(tokens)} tokens in total.")
             
@@ -442,7 +473,7 @@ def main():
                     safe_token_name = f"idx{token_idx}"
                 out_img = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_token{token_idx}_{safe_token_name}_spatial_heatmap.png")
                 plot_spatial_attention_for_token(results, token_idx, video_path, out_img, target_layer=-2, duration=duration)
-                print(f"    Saved spatial visual heatmap overlay for token [{token_idx}] '{tokens[token_idx]}' to {out_img}")
+                print(f"    Saved spatial visual rollout heatmap overlay for token [{token_idx}] '{tokens[token_idx]}' to {out_img}")
                 
             # Save results dictionary to JSON
             summary_results = {
@@ -453,8 +484,7 @@ def main():
                 "T_out": results["T_out"],
                 "H_out": results["H_out"],
                 "W_out": results["W_out"],
-                "num_layers": results["num_layers"],
-                "num_heads": results["num_heads"]
+                "num_layers": results["num_layers"]
             }
             out_json = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_attention_shift.json")
             with open(out_json, "w") as f:
