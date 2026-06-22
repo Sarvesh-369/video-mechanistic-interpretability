@@ -6,28 +6,154 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.utils.model_helpers import load_model_and_processor, prepare_video_inputs, get_associated_files, find_video_files, format_prompt_by_mode
 
-class HookState:
+class AttnCaptureState:
     def __init__(self):
-        self.query_pos = -1
-        self.captured = {}
+        self.enabled = False
+        self.temp_dir = None
+        self.captured_files = {} # layer_idx -> file_path
+        self.captured_tensors = {} # layer_idx -> tensor (shape: (q_len, seq_len))
 
-def get_hook_fn(layer_idx, state):
-    def hook_fn(module, input_args, output):
-        if isinstance(output, tuple) and len(output) > 1 and output[1] is not None:
-            attn_weights = output[1] # Shape: (batch_size, num_heads, query_len, seq_len)
+attn_capture_state = AttnCaptureState()
+
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+    batch, num_key_value_heads, seqlen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, seqlen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, seqlen, head_dim)
+
+def custom_eager_attention_forward(
+    module: torch.nn.Module,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    attention_mask: torch.Tensor,
+    scaling: float,
+    dropout: float = 0.0,
+    **kwargs,
+):
+    key_states = repeat_kv(key, module.num_key_value_groups)
+    value_states = repeat_kv(value, module.num_key_value_groups)
+
+    bs, num_heads, q_len, head_dim = query.shape
+    seq_len = key_states.shape[-2]
+    
+    chunk_size = 512 # small enough to avoid OOM
+    
+    if q_len > chunk_size:
+        # Prefill / large sequence: run query chunking
+        attn_outputs = []
+        mean_heads_list = []
+        
+        for start_idx in range(0, q_len, chunk_size):
+            end_idx = min(start_idx + chunk_size, q_len)
+            query_chunk = query[:, :, start_idx:end_idx, :]
             
-            # Average over heads immediately on GPU to save memory and CPU transfer bandwidth
-            mean_heads = torch.mean(attn_weights, dim=1).detach().cpu().float()
-            state.captured[layer_idx] = mean_heads
+            # Compute raw attention scores for the chunk
+            attn_weights_chunk = torch.matmul(query_chunk, key_states.transpose(2, 3)) * scaling
             
-            # In-place release of the massive attention weights to prevent OOM
-            dummy = torch.zeros(1, 1, 1, 1, device=attn_weights.device, dtype=attn_weights.dtype)
-            attn_weights.set_(dummy)
-            new_output = list(output)
-            new_output[1] = dummy
-            return tuple(new_output)
-        return output
-    return hook_fn
+            if attention_mask is not None:
+                if attention_mask.dim() == 4:
+                    causal_mask_chunk = attention_mask[:, :, start_idx:end_idx, :seq_len]
+                elif attention_mask.dim() == 3:
+                    causal_mask_chunk = attention_mask[:, start_idx:end_idx, :seq_len]
+                else:
+                    causal_mask_chunk = attention_mask[start_idx:end_idx, :seq_len]
+                attn_weights_chunk = attn_weights_chunk + causal_mask_chunk
+                
+            # Softmax in float32 for numerical stability
+            attn_weights_chunk = torch.nn.functional.softmax(attn_weights_chunk, dim=-1, dtype=torch.float32).to(query.dtype)
+            
+            if dropout > 0.0:
+                attn_weights_chunk = torch.nn.functional.dropout(attn_weights_chunk, p=dropout, training=module.training)
+                
+            # Compute output chunk
+            attn_output_chunk = torch.matmul(attn_weights_chunk, value_states)
+            attn_outputs.append(attn_output_chunk)
+            
+            # If capture is enabled, save the mean heads for rollout
+            if attn_capture_state.enabled:
+                mean_heads_chunk = torch.mean(attn_weights_chunk, dim=1).detach().cpu()
+                if bs == 1:
+                    mean_heads_chunk = mean_heads_chunk[0] # (chunk_len, seq_len)
+                mean_heads_list.append(mean_heads_chunk)
+                
+            # Explicitly delete chunk tensors to free GPU memory
+            del attn_weights_chunk
+            del query_chunk
+            
+        attn_output = torch.cat(attn_outputs, dim=2)
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        
+        # Save prefill attention weights to disk
+        if attn_capture_state.enabled and len(mean_heads_list) > 0:
+            layer_idx = getattr(module, "layer_idx", None)
+            if layer_idx is not None:
+                mean_heads_all = torch.cat(mean_heads_list, dim=0) # (q_len, seq_len)
+                file_path = os.path.join(attn_capture_state.temp_dir, f"prefill_attn_layer_{layer_idx}.pt")
+                torch.save(mean_heads_all.half(), file_path)
+                attn_capture_state.captured_files[layer_idx] = file_path
+                
+    else:
+        # Small query length (e.g. decoding steps, q_len=1)
+        attn_weights = torch.matmul(query, key_states.transpose(2, 3)) * scaling
+        if attention_mask is not None:
+            if attention_mask.dim() == 4:
+                causal_mask = attention_mask[:, :, :, :seq_len]
+            elif attention_mask.dim() == 3:
+                causal_mask = attention_mask[:, :, :seq_len]
+            else:
+                causal_mask = attention_mask[:, :seq_len]
+            attn_weights = attn_weights + causal_mask
+            
+        attn_weights = torch.nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
+        if dropout > 0.0:
+            attn_weights = torch.nn.functional.dropout(attn_weights, p=dropout, training=module.training)
+            
+        attn_output = torch.matmul(attn_weights, value_states)
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        
+        if attn_capture_state.enabled:
+            layer_idx = getattr(module, "layer_idx", None)
+            if layer_idx is not None:
+                mean_heads = torch.mean(attn_weights, dim=1).detach().cpu()
+                if bs == 1:
+                    mean_heads = mean_heads[0] # (q_len, seq_len)
+                attn_capture_state.captured_tensors[layer_idx] = mean_heads.half()
+                
+        del attn_weights
+
+    dummy = torch.zeros(1, 1, 1, 1, device=query.device, dtype=query.dtype)
+    return attn_output, dummy
+
+# Monkeypatching eager attention forward for Qwen3-VL, Qwen2.5-VL, or Qwen2-VL
+patched = False
+try:
+    import transformers.models.qwen3_vl.modeling_qwen3_vl as modeling_qwen3_vl
+    modeling_qwen3_vl.eager_attention_forward = custom_eager_attention_forward
+    print("Successfully monkeypatched Qwen3-VL eager_attention_forward.")
+    patched = True
+except ImportError:
+    pass
+
+try:
+    import transformers.models.qwen2_5_vl.modeling_qwen2_5_vl as modeling_qwen2_5_vl
+    modeling_qwen2_5_vl.eager_attention_forward = custom_eager_attention_forward
+    print("Successfully monkeypatched Qwen2.5-VL eager_attention_forward.")
+    patched = True
+except ImportError:
+    pass
+
+try:
+    import transformers.models.qwen2_vl.modeling_qwen2_vl as modeling_qwen2_vl
+    modeling_qwen2_vl.eager_attention_forward = custom_eager_attention_forward
+    print("Successfully monkeypatched Qwen2-VL eager_attention_forward.")
+    patched = True
+except ImportError:
+    pass
+
+if not patched:
+    print("Warning: Could not import or patch any Qwen-VL eager_attention_forward modules.")
 
 def load_video_frames(video_path, num_target_frames):
     """
@@ -84,9 +210,9 @@ def load_video_frames(video_path, num_target_frames):
 
 def run_generated_token_attention_rollout(model, inputs, processor, max_new_tokens=60):
     """
-    Runs custom autoregressive generation with KV caching and hooks
-    to compute the formal Causal Attention Rollout mapping back to the
-    input visual tokens for each generated token.
+    Runs custom autoregressive generation with KV caching and offloaded
+    attention weights to compute the formal Causal Attention Rollout mapping
+    back to the input visual tokens for each generated token.
     """
     device = next(model.parameters()).device
     tokenizer = processor.tokenizer
@@ -141,18 +267,15 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
                 
     num_layers = len(attn_modules)
     
-    # Set up hook state
-    state = HookState()
-    hooks = []
-    for layer_idx, module in attn_modules:
-        hook = module.register_forward_hook(get_hook_fn(layer_idx, state))
-        hooks.append(hook)
-        
+    # Ensure layer_idx is set on all attention modules
+    for idx, module in attn_modules:
+        if not hasattr(module, "layer_idx") or module.layer_idx is None:
+            module.layer_idx = idx
+            
     # Rollout tracking variables
     # rollout_table stores visual rollout values on CPU for each token at each layer
-    # shape: (num_layers + 1, seq_len, V)
-    # We dynamically expand the seq_len dimension as tokens are generated.
-    rollout_table = np.zeros((num_layers + 1, prompt_len, V))
+    # shape: (num_layers + 1, seq_len, V) in float16
+    rollout_table = np.zeros((num_layers + 1, prompt_len, V), dtype=np.float16)
     
     # Layer 0 Initialization: Visual tokens are initialized as one-hot arrays mapping to themselves
     for k in range(prompt_len):
@@ -163,10 +286,13 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
     generated_token_strs = []
     
     try:
+        # Enable attention capture
+        attn_capture_state.enabled = True
+        attn_capture_state.captured_files.clear()
+        attn_capture_state.captured_tensors.clear()
+        
         # Step 0: Prefill (First forward pass)
         print("    Running prefill pass...")
-        state.query_pos = slice(None) # Capture attention between all prompt tokens
-        state.captured.clear()
         
         with torch.no_grad():
             outputs = model(**inputs, use_cache=True)
@@ -177,17 +303,29 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         
         # Calculate Rollout for all layers at Prefill stage
         for l in range(1, num_layers + 1):
-            # A_l is the prompt attention matrix at layer l-1: shape (prompt_len, prompt_len)
-            A_l = state.captured[l-1][0].numpy()
-            
+            layer_idx = l - 1
+            if layer_idx in attn_capture_state.captured_files:
+                file_path = attn_capture_state.captured_files[layer_idx]
+                A_l = torch.load(file_path).float().numpy()
+                
+                # Delete temporary file immediately to free disk space
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print(f"Warning: Could not remove temp file {file_path}: {e}")
+            else:
+                print(f"Warning: Prefill attention for layer {layer_idx} not captured. Using identity.")
+                A_l = np.eye(prompt_len, dtype=np.float32)
+                
             # Apply Rollout formulation: R_l = (0.5 * A_l + 0.5 * I) @ R_{l-1}
-            A_scaled = 0.5 * A_l + 0.5 * np.eye(prompt_len)
-            rollout_table[l] = A_scaled @ rollout_table[l-1]
+            A_scaled = 0.5 * A_l + 0.5 * np.eye(prompt_len, dtype=np.float32)
+            prev_rollout = rollout_table[l-1].astype(np.float32)
+            rollout_table[l] = (A_scaled @ prev_rollout).astype(np.float16)
             
         # Store Prefill visual rollout (last prompt token index -1)
         prefill_rollouts = []
         for l in range(1, num_layers + 1):
-            prefill_vector = rollout_table[l, -1, :] # shape: (V,)
+            prefill_vector = rollout_table[l, -1, :].astype(np.float32) # Convert to float32 for processing
             reshaped = prefill_vector.reshape(T_out, H_out, W_out)
             prefill_layers = np.array(reshaped)
             prefill_rollouts.append(prefill_layers)
@@ -205,15 +343,14 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             
             # Expand the rollout table sequence length by 1 for the new token
             current_len = rollout_table.shape[1]
-            new_rollout_table = np.zeros((num_layers + 1, current_len + 1, V))
+            new_rollout_table = np.zeros((num_layers + 1, current_len + 1, V), dtype=np.float16)
             new_rollout_table[:, :current_len, :] = rollout_table
             # Initialize layer 0 for the new text token as zero
             new_rollout_table[0, current_len, :] = 0.0
             rollout_table = new_rollout_table
             
             # Reset state for current single-token forward pass
-            state.query_pos = 0 # Length of new input_ids query is 1
-            state.captured.clear()
+            attn_capture_state.captured_tensors.clear()
             
             single_inputs = {
                 "input_ids": next_token_id.unsqueeze(0).to(device),
@@ -229,25 +366,27 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             
             # Update Causal Rollout for the new generated token (at index current_len)
             for l in range(1, num_layers + 1):
-                if l-1 not in state.captured:
+                layer_idx = l - 1
+                if layer_idx not in attn_capture_state.captured_tensors:
                     # Fallback to copy from previous layer
                     rollout_table[l, current_len, :] = rollout_table[l-1, current_len, :]
                     continue
                 # Attention vector from the new token to all past tokens: shape (current_len + 1,)
-                A_l_step = state.captured[l-1][0, 0].numpy()
+                A_l_step = attn_capture_state.captured_tensors[layer_idx][0].float().numpy()
                 
                 # Causal Rollout equation:
                 # rollout[l, new] = (0.5 + 0.5 * A_self) * rollout[l-1, new] + 0.5 * sum(A_past * rollout[l-1, past])
                 self_attn = A_l_step[-1]
                 past_attn = A_l_step[:-1]
                 
-                rollout_table[l, current_len, :] = (0.5 + 0.5 * self_attn) * rollout_table[l-1, current_len, :] + \
-                                                   0.5 * (past_attn @ rollout_table[l-1, :current_len, :])
+                val_self = (0.5 + 0.5 * self_attn) * rollout_table[l-1, current_len, :].astype(np.float32)
+                val_past = 0.5 * (past_attn @ rollout_table[l-1, :current_len, :].astype(np.float32))
+                rollout_table[l, current_len, :] = (val_self + val_past).astype(np.float16)
                                                    
             # Store rollout visual heatmap for the newly generated token at Layer 1 to L
             step_rollouts = []
             for l in range(1, num_layers + 1):
-                step_vector = rollout_table[l, current_len, :] # shape: (V,)
+                step_vector = rollout_table[l, current_len, :].astype(np.float32) # Convert to float32
                 reshaped = step_vector.reshape(T_out, H_out, W_out)
                 step_rollouts.append(np.array(reshaped))
             all_step_spatial_rollouts.append(step_rollouts)
@@ -256,8 +395,18 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             print(f"      [Step {step+1}] Generated Token: {repr(token_str)}")
             
     finally:
-        for hook in hooks:
-            hook.remove()
+        # Disable attention capture
+        attn_capture_state.enabled = False
+        attn_capture_state.captured_files.clear()
+        attn_capture_state.captured_tensors.clear()
+        
+        # Clean up temp directory
+        if attn_capture_state.temp_dir and os.path.exists(attn_capture_state.temp_dir):
+            import shutil
+            try:
+                shutil.rmtree(attn_capture_state.temp_dir)
+            except Exception as e:
+                print(f"Warning: Could not remove temp directory: {e}")
             
     # Cleanup memory
     import gc
@@ -452,6 +601,11 @@ def main():
         print(f"\nProcessing Generated Token Attention for {video_name} (Mode: {args.prompt_mode.upper()}, 2.0 FPS)...")
         
         try:
+            # Configure a temporary directory for offloaded attention weights
+            temp_dir = os.path.join(args.output_dir, f"temp_attn_{video_name}")
+            os.makedirs(temp_dir, exist_ok=True)
+            attn_capture_state.temp_dir = temp_dir
+            
             results = run_generated_token_attention_rollout(model, inputs, processor, max_new_tokens=args.max_new_tokens)
             results["video_name"] = os.path.basename(video_path)
             results["prompt"] = question_text
