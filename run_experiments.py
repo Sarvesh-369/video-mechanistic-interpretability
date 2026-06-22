@@ -19,6 +19,7 @@ def main():
         print("  3 | exp3 : State Probing (ON/OFF classifications)")
         print("  4 | exp4 : Preprocessing Overrides & Ablation Study")
         print("  5 | exp5 : Logit Lens Vocabulary Projection Profile")
+        print("  6 | exp6 : Generated Token Visual Attention Tracking")
         sys.exit(1)
         
     exp_key = sys.argv[1].lower()
@@ -35,6 +36,8 @@ def main():
         "exp4": "src.exp4_preprocessing_ablation",
         "5": "src.exp5_logit_lens",
         "exp5": "src.exp5_logit_lens",
+        "6": "src.exp6_generated_token_attention",
+        "exp6": "src.exp6_generated_token_attention",
     }
     
     if exp_key not in route_map:
