@@ -30,6 +30,59 @@ def get_hook_fn(layer_idx, state, start_idx, end_idx):
         return output
     return hook_fn
 
+def load_video_frames(video_path, num_target_frames):
+    """
+    Reads exactly num_target_frames from the video at uniform intervals
+    using decord, torchvision, or opencv to serve as background images.
+    """
+    # 1. Try decord
+    try:
+        import decord
+        decord.bridge.set_bridge('native')
+        vr = decord.VideoReader(video_path)
+        total_frames = len(vr)
+        indices = np.linspace(0, total_frames - 1, num_target_frames, dtype=int)
+        frames = [vr[idx].asnumpy() for idx in indices]
+        return frames
+    except ImportError:
+        pass
+
+    # 2. Try torchvision
+    try:
+        import torchvision.io as tv_io
+        video, _, _ = tv_io.read_video(video_path, pts_unit='sec', output_format='TCHW')
+        total_frames = video.shape[0]
+        indices = np.linspace(0, total_frames - 1, num_target_frames, dtype=int)
+        frames = [video[idx].permute(1, 2, 0).numpy() for idx in indices]
+        return frames
+    except Exception:
+        pass
+
+    # 3. Try cv2 (OpenCV)
+    try:
+        import cv2
+        cap = cv2.VideoCapture(video_path)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        indices = set(np.linspace(0, total_frames - 1, num_target_frames, dtype=int))
+        frames_dict = {}
+        idx = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            if idx in indices:
+                frames_dict[idx] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            idx += 1
+        cap.release()
+        frames = [frames_dict[k] for k in sorted(frames_dict.keys())]
+        return frames
+    except Exception:
+        pass
+
+    # 4. Fallback: return dummy frames
+    print("Warning: Could not read video frames using decord, torchvision, or cv2. Using dummy frames.")
+    return [np.ones((224, 224, 3), dtype=np.uint8) * 255 for _ in range(num_target_frames)]
+
 def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
     """
     Runs custom autoregressive generation with KV caching and hooks
@@ -193,13 +246,12 @@ def run_generated_token_attention(model, inputs, processor, max_new_tokens=60):
 
 def plot_generated_token_temporal_heatmap(results, output_image_path, target_layer=-2, duration=24.0):
     """
-    Generates a 2D heatmap showing visual attention over video frames (x-axis)
+    Generates a 2D heatmap showing visual attention over video steps (x-axis)
     across each generated token (y-axis) for a specified transformer layer.
-    Upscales the T_out attention steps back to the original T frames.
+    Plots exactly the T_out steps given to the decoder (no upscaling).
     """
     tokens = results["generated_tokens"]
     attentions = np.array(results["attentions"]) # shape: (steps, layers, T_out, H_out, W_out)
-    T = results["T"]
     T_out = results["T_out"]
     
     num_layers = results["num_layers"]
@@ -217,41 +269,32 @@ def plot_generated_token_temporal_heatmap(results, output_image_path, target_lay
         normalized_attn.append(norm_val)
     normalized_attn = np.array(normalized_attn) # shape: (steps, T_out)
     
-    # Upscale temporally from T_out to T to match raw sampled frames
-    upscale_factor = int(np.round(T / T_out))
-    upscaled_attn = np.repeat(normalized_attn, upscale_factor, axis=1)
-    if upscaled_attn.shape[1] > T:
-        upscaled_attn = upscaled_attn[:, :T]
-    elif upscaled_attn.shape[1] < T:
-        pad_width = T - upscaled_attn.shape[1]
-        upscaled_attn = np.pad(upscaled_attn, ((0, 0), (0, pad_width)), mode='edge')
-        
     fig, ax = plt.subplots(figsize=(12, len(tokens) * 0.25 + 2))
-    im = ax.imshow(upscaled_attn, aspect='auto', cmap='viridis', origin='upper')
+    im = ax.imshow(normalized_attn, aspect='auto', cmap='viridis', origin='upper')
     
     ax.set_yticks(range(len(tokens)))
     ax.set_yticklabels(tokens, fontsize=8)
     
-    # Generate timestamp labels for the x-axis
-    x_ticks = np.linspace(0, T - 1, 10, dtype=int)
-    x_labels = [f"{t * (duration / T):.1f}s" for t in x_ticks]
+    # Generate timestamp labels for the x-axis mapping each step to seconds
+    x_ticks = range(T_out)
+    x_labels = [f"{t * (duration / T_out):.1f}s" for t in x_ticks]
     ax.set_xticks(x_ticks)
-    ax.set_xticklabels(x_labels, fontsize=8)
+    ax.set_xticklabels(x_labels, fontsize=8, rotation=45)
     
-    ax.set_xlabel("Video Time (Seconds)", fontsize=10, fontweight='bold')
+    ax.set_xlabel("Decoder Visual Steps (Seconds)", fontsize=10, fontweight='bold')
     ax.set_ylabel("Generated Tokens (Autoregressive Sequence)", fontsize=10, fontweight='bold')
-    ax.set_title(f"Dynamic Visual Attention per Generated Token (Layer {layer_idx}, T={T} frames)", fontsize=12, fontweight='bold')
+    ax.set_title(f"Dynamic Visual Attention per Generated Token (Layer {layer_idx}, T_out={T_out} steps)", fontsize=12, fontweight='bold')
     
     fig.colorbar(im, ax=ax, label="Attention Weight")
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=300)
     plt.close()
 
-def plot_spatial_attention_for_token(results, token_idx, output_image_path, target_layer=-2, duration=24.0):
+def plot_spatial_attention_for_token(results, token_idx, video_path, output_image_path, target_layer=-2, duration=24.0):
     """
     Plots the spatial attention visual heatmaps across all video steps
-    for a specific generated token, upscaling temporally to match T frames.
-    Selects a readable subset of frames to plot.
+    for a specific generated token, overlaid on the original video frames.
+    Plots exactly the T_out steps (no upscaling).
     """
     tokens = results["generated_tokens"]
     if token_idx < 0 or token_idx >= len(tokens):
@@ -260,7 +303,6 @@ def plot_spatial_attention_for_token(results, token_idx, output_image_path, targ
         
     token_str = tokens[token_idx]
     attentions = results["attentions"][token_idx] # shape: (layers, T_out, H_out, W_out)
-    T = results["T"]
     T_out = results["T_out"]
     
     num_layers = results["num_layers"]
@@ -269,19 +311,14 @@ def plot_spatial_attention_for_token(results, token_idx, output_image_path, targ
     # shape: (T_out, H_out, W_out)
     token_layer_attn = attentions[layer_idx]
     
-    # Upscale temporally from T_out to T
-    upscale_factor = int(np.round(T / T_out))
-    upscaled_spatial = np.repeat(token_layer_attn, upscale_factor, axis=0) # shape: (T, H_out, W_out)
-    if len(upscaled_spatial) > T:
-        upscaled_spatial = upscaled_spatial[:T]
-    elif len(upscaled_spatial) < T:
-        pad_width = T - len(upscaled_spatial)
-        upscaled_spatial = np.pad(upscaled_spatial, ((0, pad_width), (0, 0), (0, 0)), mode='edge')
-        
+    # Load exactly T_out frames from the video to serve as background
+    print(f"    Loading {T_out} video frames for heatmap overlay...")
+    background_frames = load_video_frames(video_path, T_out)
+    
     # Select a subset of frames to display (max 16 subplots for clean rendering)
     max_subplots = 16
-    step_size = max(1, T // max_subplots)
-    frame_indices = list(range(0, T, step_size))[:max_subplots]
+    step_size = max(1, T_out // max_subplots)
+    frame_indices = list(range(0, T_out, step_size))[:max_subplots]
     
     cols = min(4, len(frame_indices))
     rows = int(np.ceil(len(frame_indices) / cols))
@@ -290,19 +327,25 @@ def plot_spatial_attention_for_token(results, token_idx, output_image_path, targ
     axes = axes.flatten() if len(frame_indices) > 1 else [axes]
     
     # Determine global min/max for visual comparison
-    vmin = np.min(upscaled_spatial)
-    vmax = np.max(upscaled_spatial)
+    vmin = np.min(token_layer_attn)
+    vmax = np.max(token_layer_attn)
     if vmax == vmin:
         vmax += 1e-9
         
     for idx, t in enumerate(frame_indices):
         ax = axes[idx]
-        spatial_map = upscaled_spatial[t] # shape: (H_out, W_out)
-        timestamp = t * (duration / T)
+        spatial_map = token_layer_attn[t] # shape: (H_out, W_out)
+        background = background_frames[t]
+        timestamp = t * (duration / T_out)
         
-        # Plot 2D spatial heatmap
-        im = ax.imshow(spatial_map, cmap='viridis', extent=[0, 1, 0, 1], origin='upper', vmin=vmin, vmax=vmax)
-        ax.set_title(f"Time: {timestamp:.1f}s (Frame {t})", fontsize=9)
+        # Plot original frame as background
+        ax.imshow(background)
+        # Overlay attention heatmap with bilinear interpolation and transparency (alpha=0.5)
+        im = ax.imshow(spatial_map, cmap='jet', alpha=0.5, 
+                      extent=[0, background.shape[1], background.shape[0], 0], 
+                      interpolation='bilinear', vmin=vmin, vmax=vmax)
+        
+        ax.set_title(f"Time: {timestamp:.1f}s (Step {t})", fontsize=9)
         ax.axis('off')
         
     # Turn off unused subplots
@@ -371,7 +414,7 @@ def main():
                 raw_question = f.read().strip()
                 
         question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
-        # Prepare visual inputs at 2.0 FPS as requested
+        # Prepare visual inputs at 2.0 FPS
         inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0)
         
         video_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -382,13 +425,13 @@ def main():
             results["video_name"] = os.path.basename(video_path)
             results["prompt"] = question_text
             
-            # Save temporal attention shift plots
+            # Save temporal attention shift plots (no upscaling)
             for target_layer in [-1, -2]:
                 out_img = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_layer{target_layer}_temporal_attention_shift.png")
                 plot_generated_token_temporal_heatmap(results, out_img, target_layer=target_layer, duration=duration)
                 print(f"    Saved temporal shift plot for Layer {target_layer} to {out_img}")
                 
-            # Plot spatial visual heatmaps for a few interesting generated tokens
+            # Plot spatial visual heatmaps overlaid on actual video frames
             tokens = results["generated_tokens"]
             print(f"    Generated {len(tokens)} tokens in total.")
             
@@ -398,8 +441,8 @@ def main():
                 if not safe_token_name:
                     safe_token_name = f"idx{token_idx}"
                 out_img = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_token{token_idx}_{safe_token_name}_spatial_heatmap.png")
-                plot_spatial_attention_for_token(results, token_idx, out_img, target_layer=-2, duration=duration)
-                print(f"    Saved spatial visual heatmap for token [{token_idx}] '{tokens[token_idx]}' to {out_img}")
+                plot_spatial_attention_for_token(results, token_idx, video_path, out_img, target_layer=-2, duration=duration)
+                print(f"    Saved spatial visual heatmap overlay for token [{token_idx}] '{tokens[token_idx]}' to {out_img}")
                 
             # Save results dictionary to JSON
             summary_results = {
