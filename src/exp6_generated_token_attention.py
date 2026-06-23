@@ -547,7 +547,7 @@ def main():
     parser.add_argument("--model-id", type=str, default="Qwen/Qwen3-VL-8B-Instruct", help="HF model ID")
     parser.add_argument("--output-dir", type=str, default="results/exp6", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
-    parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode")
+    parser.add_argument("--prompt-mode", type=str, default="direct", choices=["cot", "direct"], help="Prompting mode")
     parser.add_argument("--max-new-tokens", type=int, default=60, help="Max tokens to generate")
     args = parser.parse_args()
     
