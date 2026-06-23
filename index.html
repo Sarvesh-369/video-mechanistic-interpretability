@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qwen3-VL Mechanistic Interpretability Report</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #f8fafc; /* Slate-50 */
+            --bg-grid: rgba(99, 102, 241, 0.02);
+            --primary: #4f46e5; /* Indigo-600 */
+            --primary-light: rgba(79, 70, 229, 0.08);
+            --primary-border: rgba(79, 70, 229, 0.15);
+            --accent: #9333ea; /* Purple-600 */
+            --text-main: #0f172a; /* Slate-900 */
+            --text-muted: #475569; /* Slate-600 */
+            --text-light: #64748b; /* Slate-500 */
+            --card-bg: #ffffff;
+            --card-border: rgba(15, 23, 42, 0.06);
+            --correct: #059669; /* Emerald-600 */
+            --correct-bg: rgba(5, 150, 105, 0.08);
+            --warning: #d97706; /* Amber-600 */
+            --font-outfit: 'Outfit', sans-serif;
+            --font-inter: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --transition-speed: 0.2s;
+        }
+
+        /* Base Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(147, 51, 234, 0.04) 0px, transparent 50%),
+                linear-gradient(var(--bg-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+            color: var(--text-main);
+            font-family: var(--font-inter);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 4px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .badge {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #ffffff;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-family: var(--font-outfit);
+            font-weight: 800;
+            font-size: 2.5rem;
+            color: #0f172a;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+            font-weight: 400;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid var(--card-border);
+            padding: 4px;
+            border-radius: 12px;
+            max-width: 480px;
+            margin: 30px auto;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.03);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-light);
+            font-family: var(--font-outfit);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--primary-light);
+            border: 1px solid var(--primary-border);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card Section styling */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.02);
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-family: var(--font-outfit);
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+            padding-bottom: 10px;
+        }
+
+        .section-title svg {
+            color: var(--primary);
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Interactive Simulator */
+        .simulator-box {
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 180px;
+        }
+
+        .blink-dot {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #38bdf8, #0284c7);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+            transition: all 0.08s ease;
+        }
+
+        .bounce-canvas {
+            width: 100%;
+            height: 90px;
+            background: #ffffff;
+            border-radius: 8px;
+            position: relative;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+        }
+
+        .bounce-ball-element {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #f43f5e, #be123c);
+            box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
+            position: absolute;
+            top: 34px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.08s linear;
+        }
+
+        .bounce-wall {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: rgba(15, 23, 42, 0.08);
+        }
+        .wall-left { left: 0; }
+        .wall-right { right: 0; }
+        
+        .state-machine-box {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            background: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+            transition: all 0.12s ease;
+        }
+
+        /* Controls */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(15, 23, 42, 0.08);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
+        }
+
+        .selector-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .select-btn {
+            background: #f1f5f9;
+            border: 1px solid rgba(15, 23, 42, 0.04);
+            color: var(--text-light);
+            font-family: var(--font-outfit);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        .select-btn.active {
+            color: #ffffff;
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .readout-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .readout-card {
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.04);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .readout-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .readout-value {
+            font-family: var(--font-outfit);
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .readout-value.gt { color: var(--correct); }
+        .readout-value.pred { color: var(--warning); }
+
+        /* Diagrams & Flows */
+        .diagram-container {
+            width: 100%;
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Image Display Components */
+        .result-image-panel {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .result-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+            background: #ffffff;
+        }
+
+        .image-desc {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 10px;
+            text-align: center;
+            font-family: var(--font-mono);
+        }
+
+        /* Results table */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            text-align: left;
+        }
+
+        .results-table th {
+            background: #f8fafc;
+            font-family: var(--font-outfit);
+            font-weight: 700;
+            color: var(--text-main);
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            border-bottom: 2px solid rgba(15, 23, 42, 0.05);
+        }
+
+        .results-table td {
+            padding: 10px 14px;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+        }
+
+        .results-table tr:hover {
+            background: #fafafa;
+        }
+
+        .status-pill {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-pill.correct {
+            background: var(--correct-bg);
+            color: var(--correct);
+        }
+
+
+        /* New custom layout styles for cleaner, less texty display */
+        .bullet-highlights {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .highlight-item {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            padding-left: 18px;
+            position: relative;
+        }
+        .highlight-item::before {
+            content: "•";
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+            position: absolute;
+            left: 0;
+            top: -2px;
+        }
+        .highlight-label {
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: var(--font-outfit);
+        }
+        .graphs-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-top: 20px;
+        }
+        .graph-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.01);
+        }
+        .graph-title {
+            font-family: var(--font-outfit);
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            border-left: 3px solid var(--primary);
+            padding-left: 8px;
+        }
+        .logit-lens-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .lens-domain-group {
+            background: var(--card-bg);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.01);
+        }
+        .lens-group-header {
+            font-family: var(--font-outfit);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            border-left: 4px solid var(--accent);
+            padding-left: 10px;
+        }
+        .cohort-title {
+            font-family: var(--font-inter);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 60px;
+            border-top: 1px solid rgba(15, 23, 42, 0.06);
+            padding: 24px 0;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- Header -->
+        <header>
+            <div class="badge">Mechanistic Interpretability Report</div>
+            <h1>Qwen3-VL Analysis</h1>
+            <p class="subtitle">Perception stability vs. counting limits: a visual study of internal representation layers.</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(3)">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                Linear Probing (Expt 3)
+            </button>
+            <button class="tab-btn" onclick="switchTab(5)">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                Logit Lens (Expt 5)
+            </button>
+        </div>
+
+        <!-- TAB 3: LINEAR PROBING -->
+        <div id="content-3" class="tab-content active">
+                       <!-- Motivation & Linear Probing -->
+            <div class="card">
+                <div class="section-title">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Motivation & Linear Probing
+                </div>
+                <div class="bullet-highlights">
+                    <div class="highlight-item">
+                        <span class="highlight-label">The Core Question:</span>
+                        Do counting failures originate in <strong>perception</strong> (vision encoder failing to resolve state transitions) or in <strong>reasoning</strong> (decoder failing to aggregate events in context)?
+                    </div>
+                    <div class="highlight-item">
+                        <span class="highlight-label">Feature Extraction (Layer -2):</span>
+                        During a forward pass of a video, we register a PyTorch forward hook on the text decoder self-attention modules at the second-to-last transformer layer (layer -2) to capture raw token activations.
+                    </div>
+                    <div class="highlight-item">
+                        <span class="highlight-label">Spatial Pooling & Alignment:</span>
+                        Visual tokens are represented as a 3D grid (T_out, H_out, W_out, 4096). We average the 4096-dimensional vectors spatially across the spatial coordinates (H, W) to produce a single (T_out, 4096) feature trajectory—yielding one vector per second.
+                    </div>
+                    <div class="highlight-item">
+                        <span class="highlight-label">Classifier Training (Count &le; 3):</span>
+                        We train a Logistic Regression probe on the pooled 4096-dimensional representation vectors from low-count videos (&le; 3 events) to learn a linear boundary mapping representations to the binary ground-truth state (ON/OFF, Wall A/B, or Cool/Warm).
+                    </div>
+                    <div class="highlight-item">
+                        <span class="highlight-label">Perceptual Evaluation (Count &ge; 5):</span>
+                        We evaluate the trained probe on representations from high-count trap videos (&ge; 5 events). High test accuracy indicates that the model's representations preserve the visual states frame-by-frame, verifying that the bottleneck is not perceptual.
+                    </div>
+                </div>
+                
+                <div class="diagram-container">
+                    <svg width="720" height="100" viewBox="0 0 720 100">
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b" />
+                            </marker>
+                        </defs>
+                        <rect x="5" y="25" width="80" height="50" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5" />
+                        <text x="45" y="55" text-anchor="middle" fill="#0f172a" font-weight="600" font-size="10" font-family="var(--font-outfit)">Video Input</text>
+                        
+                        <line x1="85" y1="50" x2="115" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" />
+                        
+                        <rect x="120" y="25" width="90" height="50" rx="6" fill="#e0e7ff" stroke="#c7d2fe" stroke-width="1.5" />
+                        <text x="165" y="55" text-anchor="middle" fill="#4338ca" font-weight="600" font-size="10" font-family="var(--font-outfit)">Vision Encoder</text>
+                        
+                        <line x1="210" y1="50" x2="240" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" />
+                        
+                        <rect x="245" y="20" width="130" height="60" rx="6" fill="#faf5ff" stroke="#f3e8ff" stroke-width="1.5" />
+                        <text x="310" y="45" text-anchor="middle" fill="#6b21a8" font-weight="600" font-size="10" font-family="var(--font-outfit)">Hidden States (L-2)</text>
+                        <text x="310" y="60" text-anchor="middle" fill="#7e22ce" font-size="8" font-family="var(--font-mono)">(T_out, H_out, W_out, 4096)</text>
+                        
+                        <line x1="375" y1="50" x2="405" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" />
+                        
+                        <rect x="410" y="25" width="90" height="50" rx="6" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5" />
+                        <text x="455" y="55" text-anchor="middle" fill="#047857" font-weight="600" font-size="10" font-family="var(--font-outfit)">Spatial Pooling</text>
+                        
+                        <line x1="500" y1="50" x2="530" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" />
+                        
+                        <rect x="535" y="25" width="80" height="50" rx="6" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5" />
+                        <text x="575" y="55" text-anchor="middle" fill="#b45309" font-weight="600" font-size="10" font-family="var(--font-outfit)">Linear Probe</text>
+                        
+                        <line x1="615" y1="50" x2="645" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" />
+                        
+                        <rect x="650" y="25" width="65" height="50" rx="6" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" />
+                        <text x="682" y="55" text-anchor="middle" fill="#15803d" font-weight="600" font-size="10" font-family="var(--font-outfit)">ON / OFF</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Probing Simulator -->
+            <div class="card">
+                <div class="section-title">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    State Probing Simulator (0.5 Hz Results)
+                </div>
+                
+                <div class="grid-2col">
+                    <div>
+                        <div class="selector-row">
+                            <button id="btn-domain-blinking" class="select-btn active" onclick="setDomain('blinking')">Blinking Dot (0.5 Hz)</button>
+                            <button id="btn-domain-bounce" class="select-btn" onclick="setDomain('bounce')">Bounce Ball (0.5 Hz)</button>
+                            <button id="btn-domain-state" class="select-btn" onclick="setDomain('state')">Transitions (0.5 Hz)</button>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <div class="slider-labels">
+                                <span id="lbl-slider-time">Timestamp: 0.0s</span>
+                                <span id="lbl-slider-step">Frame Step: 1/24</span>
+                            </div>
+                            <input id="sim-slider" type="range" min="0" max="23" value="0" oninput="updateSim()">
+                        </div>
+
+                        <div class="readout-panel">
+                            <div class="readout-card">
+                                <div class="readout-label">Ground Truth State</div>
+                                <div id="val-gt" class="readout-value gt">ON (1)</div>
+                            </div>
+                            <div class="readout-card">
+                                <div class="readout-label">Probe Predicted State</div>
+                                <div id="val-pred" class="readout-value pred">ON (1)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="simulator-box">
+                            <div id="sim-visual-blinking" class="blink-dot" style="opacity: 1; transform: scale(1.15);"></div>
+                            
+                            <div id="sim-visual-bounce" class="bounce-canvas" style="display: none;">
+                                <div class="bounce-wall wall-left"></div>
+                                <div class="bounce-wall wall-right"></div>
+                                <div id="sim-ball" class="bounce-ball-element"></div>
+                            </div>
+                            
+                            <div id="sim-visual-state" class="state-machine-box" style="display: none; background-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Probing Results & Actual Graphs -->
+            <div class="card">
+                <div class="section-title">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    Probing Results & Empirical Trajectories (0.5 Hz)
+                </div>
+                
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Domain</th>
+                                <th>Evaluation Video File</th>
+                                <th>Train Accuracy</th>
+                                <th>Test Accuracy</th>
+                                <th>F1-Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Blinking</strong></td>
+                                <td><code>sweep_count_blinks_c6_f0.5_s9_d24.0_count_blinks.mp4</code></td>
+                                <td><span class="status-pill correct">96.10%</span></td>
+                                <td><strong>65.00%</strong></td>
+                                <td>0.58 (Weighted)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Bounce Ball</strong></td>
+                                <td><code>sweep_count_bounces_c6_f0.5_s9_d24.0_count_bounces.mp4</code></td>
+                                <td><span class="status-pill correct">100.00%</span></td>
+                                <td><strong>58.00%</strong></td>
+                                <td>0.59 (Weighted)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>State Transitions</strong></td>
+                                <td><code>sweep_total_transitions_c6_f0.5_s9_d24.0_total_transitions_s74212.mp4</code></td>
+                                <td><span class="status-pill correct">95.76%</span></td>
+                                <td><strong>51.61%</strong></td>
+                                <td>0.51 (Weighted)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="graphs-grid">
+                    <div class="graph-card">
+                        <h4 class="graph-title">Blinking Dot Domain Probe (sweep_count_blinks_c6_f0.5)</h4>
+                        <img class="result-img" src="results/exp3/blinking/sweep_count_blinks_c6_f0.5_s9_d24.0_count_blinks_probe.png" alt="Blinking Probing results graph">
+                    </div>
+                    <div class="graph-card">
+                        <h4 class="graph-title">Bounce Ball Domain Probe (sweep_count_bounces_c6_f0.5)</h4>
+                        <img class="result-img" src="results/exp3/bounce_ball/sweep_count_bounces_c6_f0.5_s9_d24.0_count_bounces_probe.png" alt="Bounce Ball Probing results graph">
+                    </div>
+                    <div class="graph-card">
+                        <h4 class="graph-title">State Transitions Domain Probe (sweep_total_transitions_c6_f0.5)</h4>
+                        <img class="result-img" src="results/exp3/state_machine/sweep_total_transitions_c6_f0.5_s9_d24.0_total_transitions_s74212_probe.png" alt="State Transitions Probing results graph">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- TAB 5: LOGIT LENS -->
+        <div id="content-5" class="tab-content">
+            
+            <!-- Motivation & Projections Process -->
+            <div class="card">
+                <div class="section-title">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Motivation & Logit Lens Process
+                </div>
+                <div class="bullet-highlights">
+                    <div class="highlight-item">
+                        <span class="highlight-label">The Core Question:</span>
+                        If the intermediate representations successfully track the object state, why does the model output incorrect counts? We use Logit Lens to project layer-wise representations directly into the vocabulary token space to observe count logit emergence.
+                    </div>
+                    <div class="highlight-item">
+                        <span class="highlight-label">Target Token:</span>
+                        Project the hidden state <code>h<sub>l</sub></code> of the final query token at each decoder layer <code>l</code> in [0, 36].
+                    </div>
+                    <div class="highlight-item">
+                        <span class="highlight-label">Vocabulary Mapping:</span>
+                        Normalize and multiply the vector by the model's <code>lm_head</code> weights to retrieve vocabulary logits.
+                    </div>
+                    <div class="highlight-item">
+                        <span class="highlight-label">Probability Distribution:</span>
+                        Apply Softmax over target digit tokens (e.g. <code>'1'</code>, <code>'2'</code>, <code>'3'</code>, <code>'4'</code>, <code>'5'</code>) to map the token probability emergence at each layer.
+                    </div>
+                </div>
+                
+                <div class="diagram-container">
+                    <svg width="720" height="100" viewBox="0 0 720 100">
+                        <defs>
+                            <marker id="arrow2" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b" />
+                            </marker>
+                        </defs>
+                        <rect x="5" y="25" width="130" height="50" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+                        <text x="70" y="50" text-anchor="middle" fill="#0f172a" font-weight="600" font-size="10" font-family="var(--font-outfit)">Layer Hidden State</text>
+                        <text x="70" y="62" text-anchor="middle" fill="#64748b" font-size="8" font-family="var(--font-mono)">h_l^(query)</text>
+                        
+                        <line x1="140" y1="50" x2="175" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow2)" />
+                        
+                        <rect x="180" y="25" width="100" height="50" rx="6" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.5" />
+                        <text x="230" y="55" text-anchor="middle" fill="#6d28d9" font-weight="600" font-size="10" font-family="var(--font-outfit)">Layer Norm</text>
+                        
+                        <line x1="280" y1="50" x2="315" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow2)" />
+                        
+                        <rect x="320" y="25" width="110" height="50" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
+                        <text x="375" y="55" text-anchor="middle" fill="#1d4ed8" font-weight="600" font-size="10" font-family="var(--font-outfit)">LM Head Multiply</text>
+                        
+                        <line x1="430" y1="50" x2="465" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow2)" />
+                        
+                        <rect x="470" y="25" width="80" height="50" rx="6" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5" />
+                        <text x="510" y="55" text-anchor="middle" fill="#047857" font-weight="600" font-size="10" font-family="var(--font-outfit)">Softmax</text>
+                        
+                        <line x1="550" y1="50" x2="585" y2="50" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow2)" />
+                        
+                        <rect x="590" y="25" width="125" height="50" rx="6" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5" />
+                        <text x="652" y="50" text-anchor="middle" fill="#b45309" font-weight="600" font-size="10" font-family="var(--font-outfit)">Vocab Probs</text>
+                        <text x="652" y="62" text-anchor="middle" fill="#d97706" font-size="8" font-family="var(--font-inter)">P('2') vs P('1') etc.</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Logit Lens Empirical Graphs -->
+            <div class="card">
+                <div class="section-title">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
+                    Empirical Logit Lens Plots (0.5 Hz)
+                </div>
+                
+                <div class="logit-lens-sections">
+                    <!-- Blinking Domain -->
+                    <div class="lens-domain-group">
+                        <div class="lens-group-header">Blinking Dot Domain Logit Lens</div>
+                        <div class="grid-2col" style="grid-template-columns: 1fr 1fr; margin-top: 10px;">
+                            <div>
+                                <h5 class="cohort-title">Cohort A (Low Count, GT = 2)</h5>
+                                <div class="result-image-panel">
+                                    <img class="result-img" src="results/exp5/blinking/cot/cohort_A_sweep_count_blinks_c2_f0.5_s9_d24.0_count_blinks_logit_lens.png" alt="Cohort A logit lens (blinking)">
+                                </div>
+                            </div>
+                            <div>
+                                <h5 class="cohort-title">Cohort B (High Count, GT = 5)</h5>
+                                <div class="result-image-panel">
+                                    <img class="result-img" src="results/exp5/blinking/cot/cohort_B_sweep_count_blinks_c5_f0.5_s2_d24.0_count_blinks_logit_lens.png" alt="Cohort B logit lens (blinking)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bounce Ball Domain -->
+                    <div class="lens-domain-group">
+                        <div class="lens-group-header">Bounce Ball Domain Logit Lens</div>
+                        <div class="grid-2col" style="grid-template-columns: 1fr 1fr; margin-top: 10px;">
+                            <div>
+                                <h5 class="cohort-title">Cohort A (Low Count, GT = 2)</h5>
+                                <div class="result-image-panel">
+                                    <img class="result-img" src="results/exp5/bounce_ball/cot/cohort_A_sweep_count_bounces_c2_f0.5_s9_d24.0_count_bounces_logit_lens.png" alt="Cohort A logit lens (bounce ball)">
+                                </div>
+                            </div>
+                            <div>
+                                <h5 class="cohort-title">Cohort B (High Count, GT = 5)</h5>
+                                <div class="result-image-panel">
+                                    <img class="result-img" src="results/exp5/bounce_ball/cot/cohort_B_sweep_count_bounces_c5_f0.5_s2_d24.0_count_bounces_logit_lens.png" alt="Cohort B logit lens (bounce ball)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- State Transitions Domain -->
+                    <div class="lens-domain-group">
+                        <div class="lens-group-header">State Transitions Domain Logit Lens</div>
+                        <div class="grid-2col" style="grid-template-columns: 1fr 1fr; margin-top: 10px;">
+                            <div>
+                                <h5 class="cohort-title">Cohort A (Low Count, GT = 2)</h5>
+                                <div class="result-image-panel">
+                                    <img class="result-img" src="results/exp5/state_machine/cot/cohort_A_sweep_total_transitions_c2_f0.5_s9_d24.0_total_transitions_s34212_logit_lens.png" alt="Cohort A logit lens (state transitions)">
+                                </div>
+                            </div>
+                            <div>
+                                <h5 class="cohort-title">Cohort B (High Count, GT = 5)</h5>
+                                <div class="result-image-panel">
+                                    <img class="result-img" src="results/exp5/state_machine/cot/cohort_B_sweep_total_transitions_c5_f0.5_s2_d24.0_total_transitions_s57212_logit_lens.png" alt="Cohort B logit lens (state transitions)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <span>Low-Frequency Traps in VLMs &bull; Mechanistic Interpretability Report</span>
+            <span>Created for Sarvesh &bull; June 2026</span>
+        </footer>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        // --- 1. Tab Navigation ---
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            const activeBtnIndex = tabIndex === 3 ? 0 : 1;
+            document.querySelectorAll('.tab-btn')[activeBtnIndex].classList.add('active');
+            
+            document.getElementById(`content-${tabIndex}`).classList.add('active');
+        }
+
+        // --- 2. Experiment 3: Probing Simulator Logic ---
+        let currentDomain = 'blinking';
+        
+        // Actual extracted empirical ground truth and predicted state trajectories from local 0.5 Hz graphs
+        const simData = {
+            blinking: {
+                gt:   [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                pred: [1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1]
+            },
+            bounce: {
+                gt:   [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+                pred: [1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1]
+            },
+            state: {
+                gt:   [0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1],
+                pred: [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
+            }
+        };
+
+        function getReadoutText(domain, state) {
+            if (domain === 'blinking') {
+                return state === 1 ? 'ON (1)' : 'OFF (0)';
+            } else if (domain === 'bounce') {
+                return state === 1 ? 'Right Wall (1)' : 'Left Wall (0)';
+            } else if (domain === 'state') {
+                return state === 1 ? 'Warm (1)' : 'Cool (0)';
+            }
+            return state;
+        }
+
+        function setDomain(domain) {
+            currentDomain = domain;
+            document.querySelectorAll('#content-3 .selector-row .select-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-domain-${domain}`).classList.add('active');
+            
+            document.getElementById('sim-visual-blinking').style.display = domain === 'blinking' ? 'block' : 'none';
+            document.getElementById('sim-visual-bounce').style.display = domain === 'bounce' ? 'block' : 'none';
+            document.getElementById('sim-visual-state').style.display = domain === 'state' ? 'block' : 'none';
+            
+            updateSim();
+        }
+
+        function updateSim() {
+            const slider = document.getElementById('sim-slider');
+            const step = parseInt(slider.value);
+            const time = (step * 1.0).toFixed(1);
+            
+            document.getElementById('lbl-slider-time').innerText = `Timestamp: ${time}s`;
+            document.getElementById('lbl-slider-step').innerText = `Frame Step: ${step + 1}/24`;
+            
+            const gt = simData[currentDomain].gt[step];
+            const pred = simData[currentDomain].pred[step];
+            
+            document.getElementById('val-gt').innerText = getReadoutText(currentDomain, gt);
+            document.getElementById('val-pred').innerText = getReadoutText(currentDomain, pred);
+            
+            if (currentDomain === 'blinking') {
+                const dot = document.getElementById('sim-visual-blinking');
+                if (gt === 1) {
+                    dot.style.opacity = '1';
+                    dot.style.transform = 'scale(1.15)';
+                    dot.style.boxShadow = '0 0 20px rgba(56, 189, 248, 0.6)';
+                } else {
+                    dot.style.opacity = '0.1';
+                    dot.style.transform = 'scale(0.9)';
+                    dot.style.boxShadow = 'none';
+                }
+            } else if (currentDomain === 'bounce') {
+                const ball = document.getElementById('sim-ball');
+                const leftPercent = gt === 1 ? 92 : 8;
+                ball.style.left = `${leftPercent}%`;
+            } else if (currentDomain === 'state') {
+                const box = document.getElementById('sim-visual-state');
+                if (gt === 1) {
+                    box.style.backgroundColor = '#ef4444'; // RED (Warm state)
+                    box.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
+                } else {
+                    box.style.backgroundColor = '#3b82f6'; // BLUE (Cool state)
+                    box.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.5)';
+                }
+            }
+        }
+
+        // Initialize simulator on DOM load
+        setDomain('blinking');
+    </script>
+</body>
+</body>
+</html>

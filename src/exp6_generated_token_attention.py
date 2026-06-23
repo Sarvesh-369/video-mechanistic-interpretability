@@ -231,9 +231,12 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
     if len(start_pos) == 0 or len(end_pos) == 0:
         raise ValueError("Could not locate <|vision_start|> or <|vision_end|> tokens.")
         
-    start_idx = start_pos[0].item() + 1
-    end_idx = end_pos[0].item()
-    V = end_idx - start_idx # Total visual tokens
+    # Collect all visual token positions in input_ids
+    visual_positions = []
+    for s_pos, e_pos in zip(start_pos, end_pos):
+        visual_positions.extend(range(s_pos.item() + 1, e_pos.item()))
+        
+    V = len(visual_positions)
     
     # Get grid information
     if "video_grid_thw" not in inputs:
@@ -278,9 +281,10 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
     rollout_table = np.zeros((num_layers + 1, prompt_len, V), dtype=np.float16)
     
     # Layer 0 Initialization: Visual tokens are initialized as one-hot arrays mapping to themselves
+    prompt_to_visual_idx = {pos: idx for idx, pos in enumerate(visual_positions)}
     for k in range(prompt_len):
-        if start_idx <= k < end_idx:
-            rollout_table[0, k, k - start_idx] = 1.0
+        if k in prompt_to_visual_idx:
+            rollout_table[0, k, prompt_to_visual_idx[k]] = 1.0
             
     all_step_spatial_rollouts = [] # Will store visual rollout heatmaps: (steps, layers, T_out, H_out, W_out)
     generated_token_strs = []
@@ -326,7 +330,7 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         prefill_rollouts = []
         for l in range(1, num_layers + 1):
             prefill_vector = rollout_table[l, -1, :].astype(np.float32) # Convert to float32 for processing
-            reshaped = prefill_vector.reshape(T_out, H_out, W_out)
+            reshaped = prefill_vector.reshape(T, H_out, W_out)
             prefill_layers = np.array(reshaped)
             prefill_rollouts.append(prefill_layers)
         all_step_spatial_rollouts.append(prefill_rollouts)
@@ -387,7 +391,7 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             step_rollouts = []
             for l in range(1, num_layers + 1):
                 step_vector = rollout_table[l, current_len, :].astype(np.float32) # Convert to float32
-                reshaped = step_vector.reshape(T_out, H_out, W_out)
+                reshaped = step_vector.reshape(T, H_out, W_out)
                 step_rollouts.append(np.array(reshaped))
             all_step_spatial_rollouts.append(step_rollouts)
             
@@ -431,23 +435,23 @@ def plot_generated_token_temporal_heatmap(results, output_image_path, target_lay
     Plots exactly the T_out steps given to the decoder (no upscaling).
     """
     tokens = results["generated_tokens"]
-    attentions = np.array(results["attentions"]) # shape: (steps, layers, T_out, H_out, W_out)
-    T_out = results["T_out"]
+    attentions = np.array(results["attentions"]) # shape: (steps, layers, T, H_out, W_out)
+    T_actual = attentions.shape[2]
     
     num_layers = results["num_layers"]
     layer_idx = target_layer if target_layer >= 0 else num_layers + target_layer
     
     # Sum over spatial coordinates (H_out, W_out) to get temporal attention
-    temporal_layer_attn = np.sum(attentions[:, layer_idx, :, :, :], axis=(3, 4)) # shape: (steps, T_out)
+    temporal_layer_attn = np.sum(attentions[:, layer_idx, :, :, :], axis=(3, 4)) # shape: (steps, T)
     
-    # Normalize over T_out for each step
+    # Normalize over temporal dimension for each step
     normalized_attn = []
     for step in range(len(tokens)):
         step_val = temporal_layer_attn[step]
         sum_val = np.sum(step_val)
-        norm_val = step_val / sum_val if sum_val > 0 else np.ones(T_out) / T_out
+        norm_val = step_val / sum_val if sum_val > 0 else np.ones(T_actual) / T_actual
         normalized_attn.append(norm_val)
-    normalized_attn = np.array(normalized_attn) # shape: (steps, T_out)
+    normalized_attn = np.array(normalized_attn) # shape: (steps, T)
     
     fig, ax = plt.subplots(figsize=(12, len(tokens) * 0.25 + 2))
     im = ax.imshow(normalized_attn, aspect='auto', cmap='viridis', origin='upper')
@@ -456,14 +460,14 @@ def plot_generated_token_temporal_heatmap(results, output_image_path, target_lay
     ax.set_yticklabels(tokens, fontsize=8)
     
     # Generate timestamp labels for the x-axis mapping each step to seconds
-    x_ticks = range(T_out)
-    x_labels = [f"{t * (duration / T_out):.1f}s" for t in x_ticks]
+    x_ticks = range(T_actual)
+    x_labels = [f"{t * (duration / T_actual):.1f}s" for t in x_ticks]
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels, fontsize=8, rotation=45)
     
     ax.set_xlabel("Decoder Visual Steps (Seconds)", fontsize=10, fontweight='bold')
     ax.set_ylabel("Generated Tokens (Autoregressive Sequence)", fontsize=10, fontweight='bold')
-    ax.set_title(f"Dynamic Visual Attention Rollout per Generated Token (Layer {layer_idx}, T_out={T_out} steps)", fontsize=12, fontweight='bold')
+    ax.set_title(f"Dynamic Visual Attention Rollout per Generated Token (Layer {layer_idx}, T={T_actual} steps)", fontsize=12, fontweight='bold')
     
     fig.colorbar(im, ax=ax, label="Attention Flow")
     plt.tight_layout()
@@ -482,23 +486,23 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
         return
         
     token_str = tokens[token_idx]
-    attentions = results["attentions"][token_idx] # shape: (layers, T_out, H_out, W_out)
-    T_out = results["T_out"]
+    attentions = results["attentions"][token_idx] # shape: (layers, T_actual, H_out, W_out)
+    T_actual = attentions.shape[1]
     
     num_layers = results["num_layers"]
     layer_idx = target_layer if target_layer >= 0 else num_layers + target_layer
     
-    # shape: (T_out, H_out, W_out)
+    # shape: (T_actual, H_out, W_out)
     token_layer_attn = attentions[layer_idx]
     
-    # Load exactly T_out frames from the video to serve as background
-    print(f"    Loading {T_out} video frames for heatmap overlay...")
-    background_frames = load_video_frames(video_path, T_out)
+    # Load exactly T_actual frames from the video to serve as background
+    print(f"    Loading {T_actual} video frames for heatmap overlay...")
+    background_frames = load_video_frames(video_path, T_actual)
     
     # Select a subset of frames to display (max 16 subplots for clean rendering)
     max_subplots = 16
-    step_size = max(1, T_out // max_subplots)
-    frame_indices = list(range(0, T_out, step_size))[:max_subplots]
+    step_size = max(1, T_actual // max_subplots)
+    frame_indices = list(range(0, T_actual, step_size))[:max_subplots]
     
     cols = min(4, len(frame_indices))
     rows = int(np.ceil(len(frame_indices) / cols))
@@ -516,7 +520,7 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
         ax = axes[idx]
         spatial_map = token_layer_attn[t] # shape: (H_out, W_out)
         background = background_frames[t]
-        timestamp = t * (duration / T_out)
+        timestamp = t * (duration / T_actual)
         
         # Plot original frame as background
         ax.imshow(background)
