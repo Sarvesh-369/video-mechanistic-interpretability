@@ -598,11 +598,11 @@
                     </div>
                     <div class="highlight-item">
                         <span class="highlight-label">Classifier Training (Count &le; 3):</span>
-                        We train a Logistic Regression probe on the pooled 4096-dimensional representation vectors from low-count videos (&le; 3 events) to learn a linear boundary mapping representations to the binary ground-truth state (ON/OFF, Wall A/B, or Cool/Warm).
+                        We train a Logistic Regression probe on the pooled 4096-dimensional representation vectors from low-count videos (&le; 3 events) to learn a linear boundary mapping representations to the binary ground-truth state (ON/OFF, Wall A/B, or Cool/Warm). We perform the prediction frame-by-frame, where each individual frame's representation vector is evaluated independently.
                     </div>
                     <div class="highlight-item">
                         <span class="highlight-label">Perceptual Evaluation (Count &ge; 5):</span>
-                        We evaluate the trained probe on representations from high-count trap videos (&ge; 5 events). High test accuracy indicates that the model's representations preserve the visual states frame-by-frame, verifying that the bottleneck is not perceptual.
+                        We evaluate the trained probe on representations from high-count trap videos (&ge; 5 events) frame-by-frame. High test accuracy indicates that the model's representations preserve the visual states frame-by-frame, verifying that the bottleneck is not perceptual.
                     </div>
                 </div>
                 
@@ -775,8 +775,8 @@
                         Project the hidden state <code>h<sub>l</sub></code> of the final query token at each decoder layer <code>l</code> in [0, 36].
                     </div>
                     <div class="highlight-item">
-                        <span class="highlight-label">Vocabulary Mapping:</span>
-                        Normalize and multiply the vector by the model's <code>lm_head</code> weights to retrieve vocabulary logits.
+                        <span class="highlight-label">Vocabulary Mapping & Dimension Matching:</span>
+                        We map the 4096-dimensional intermediate hidden state back to the vocabulary space without training new layers. Instead, we use the pre-trained weights of the model's own language model head (<code>lm_head</code>), which acts as a linear layer of shape <code>(4096, 151936)</code> that projects the 4096-dimensional hidden vector to logits over the vocabulary tokens.
                     </div>
                     <div class="highlight-item">
                         <span class="highlight-label">Probability Distribution:</span>
