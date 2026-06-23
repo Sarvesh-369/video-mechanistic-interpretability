@@ -442,7 +442,7 @@ def plot_generated_token_temporal_heatmap(results, output_image_path, target_lay
     layer_idx = target_layer if target_layer >= 0 else num_layers + target_layer
     
     # Sum over spatial coordinates (H_out, W_out) to get temporal attention
-    temporal_layer_attn = np.sum(attentions[:, layer_idx, :, :, :], axis=(3, 4)) # shape: (steps, T)
+    temporal_layer_attn = np.sum(attentions[:, layer_idx, :, :, :], axis=(2, 3)) # shape: (steps, T)
     
     # Normalize over temporal dimension for each step
     normalized_attn = []
