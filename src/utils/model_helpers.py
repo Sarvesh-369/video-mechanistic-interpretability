@@ -99,6 +99,19 @@ def prepare_video_inputs(video_path, question_text, processor, device="cuda", fp
             print("torchvision is missing read_video support. Forcing decord backend...")
             os.environ["FORCE_QWENVL_VIDEO_READER"] = "decord"
 
+    messages = []
+    # If the question contains direct formatting instructions, add a system message to enforce it
+    if "Respond ONLY" in question_text or "Format your response" in question_text:
+        messages.append({
+            "role": "system",
+            "content": "You are a precise counting assistant. You must respond ONLY with the final count wrapped in \\boxed{}, containing only the number. Never output any other text, introduction, reasoning, list, or extra punctuation. For example, if the count is 3, write exactly \\boxed{3}."
+        })
+    else:
+        messages.append({
+            "role": "system",
+            "content": "You are a helpful assistant. Always put your final numeric count inside \\boxed{} at the very end of your response."
+        })
+
     content = []
     video_item = {"type": "video", "video": os.path.abspath(video_path)}
     if fps is not None:
@@ -107,12 +120,10 @@ def prepare_video_inputs(video_path, question_text, processor, device="cuda", fp
     content.append(video_item)
     content.append({"type": "text", "text": question_text})
     
-    messages = [
-        {
-            "role": "user",
-            "content": content
-        }
-    ]
+    messages.append({
+        "role": "user",
+        "content": content
+    })
     
     # Formulate chat template prompt
     text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -319,5 +330,4 @@ def format_prompt_by_mode(base_question, prompt_mode):
     if prompt_mode == "cot":
         return f"{clean_question} Show your reasoning step-by-step and put the final numeric count in \\boxed{{}}."
     else:
-        return f"{clean_question} Answer with a single numeric count only inside \\boxed{{}} with no other text."
-
+        return f"{clean_question}\n\nRespond ONLY with the final count wrapped in \\boxed{{}} (e.g., \\boxed{{3}}). Do not include any other text, reasoning, intro, or numbered lists. Write nothing else."

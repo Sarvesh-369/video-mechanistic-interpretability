@@ -491,20 +491,15 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
     token_layer_attn = np.array(results["attentions"][token_idx][layer_idx])
     T_actual = token_layer_attn.shape[0]
     
-    # Load exactly T_actual frames from the video to serve as background
+    # Load all T_actual frames from the video to serve as background
     print(f"    Loading {T_actual} video frames for heatmap overlay...")
     background_frames = load_video_frames(video_path, T_actual)
     
-    # Select a subset of frames to display (max 16 subplots for clean rendering)
-    max_subplots = 16
-    step_size = max(1, T_actual // max_subplots)
-    frame_indices = list(range(0, T_actual, step_size))[:max_subplots]
+    cols = 4
+    rows = int(np.ceil(T_actual / cols))
     
-    cols = min(4, len(frame_indices))
-    rows = int(np.ceil(len(frame_indices) / cols))
-    
-    fig, axes = plt.subplots(rows, cols, figsize=(cols * 2.5, rows * 2.5))
-    axes = axes.flatten() if len(frame_indices) > 1 else [axes]
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 3.0, rows * 3.0))
+    axes = axes.flatten() if T_actual > 1 else [axes]
     
     # Determine global min/max for visual comparison
     vmin = np.min(token_layer_attn)
@@ -512,8 +507,8 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
     if vmax == vmin:
         vmax += 1e-9
         
-    for idx, t in enumerate(frame_indices):
-        ax = axes[idx]
+    for t in range(T_actual):
+        ax = axes[t]
         spatial_map = token_layer_attn[t] # shape: (H_out, W_out)
         background = background_frames[t]
         timestamp = t * (duration / T_actual)
@@ -529,7 +524,7 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
         ax.axis('off')
         
     # Turn off unused subplots
-    for idx in range(len(frame_indices), len(axes)):
+    for idx in range(T_actual, len(axes)):
         axes[idx].axis('off')
         
     fig.suptitle(f"Visual Attention Rollout for Token [{token_idx}] '{token_str}' (Layer {layer_idx})", fontsize=12, fontweight='bold')
@@ -631,10 +626,17 @@ def main():
             tokens = results["generated_tokens"]
             print(f"    Generated {len(tokens)} tokens in total.")
             
-            if len(tokens) <= 6:
-                target_indices = list(range(1, len(tokens)))
-            else:
-                target_indices = [idx for idx in [1, 5, 10, 15, 20, 30] if idx < len(tokens)]
+            # Print the full generated answer
+            full_gen = "".join(tokens[1:])
+            print(f"\n    === Generated Response for {video_name} ({args.prompt_mode.upper()}) ===")
+            print(f"    {full_gen.strip()}")
+            print(f"    ==================================================\n")
+            
+            # We plot the heatmap for all actual generated tokens (excluding <prefill> and stop tokens)
+            target_indices = []
+            for idx in range(1, len(tokens)):
+                if tokens[idx] not in ["<|im_end|>", "<|endoftext|>"]:
+                    target_indices.append(idx)
                 
             for token_idx in target_indices:
                 safe_token_name = "".join([c if c.isalnum() else "_" for c in tokens[token_idx]]).strip("_")
