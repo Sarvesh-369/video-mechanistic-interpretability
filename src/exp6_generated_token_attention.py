@@ -598,7 +598,12 @@ def main():
         duration = metadata.get("duration", 24.0)
         
         if not q_path:
-            raw_question = "How many times did the object flash?"
+            if "bounce" in video_path.lower():
+                raw_question = "How many times did the ball bounce?"
+            elif "state" in video_path.lower() or "transition" in video_path.lower():
+                raw_question = "How many color changes occurred in total?"
+            else:
+                raw_question = "How many times did the object flash?"
         else:
             with open(q_path, "r") as f:
                 raw_question = f.read().strip()
