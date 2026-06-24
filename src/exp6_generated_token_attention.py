@@ -275,18 +275,8 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         if not hasattr(module, "layer_idx") or module.layer_idx is None:
             module.layer_idx = idx
             
-    # Rollout tracking variables
-    # rollout_table stores visual rollout values on CPU for each token at each layer
-    # shape: (num_layers + 1, seq_len, V) in float16
-    rollout_table = np.zeros((num_layers + 1, prompt_len, V), dtype=np.float16)
-    
-    # Layer 0 Initialization: Visual tokens are initialized as one-hot arrays mapping to themselves
-    prompt_to_visual_idx = {pos: idx for idx, pos in enumerate(visual_positions)}
-    for k in range(prompt_len):
-        if k in prompt_to_visual_idx:
-            rollout_table[0, k, prompt_to_visual_idx[k]] = 1.0
-            
-    all_step_spatial_rollouts = [] # Will store visual rollout heatmaps: (steps, layers, T_out, H_out, W_out)
+    # Raw attention tracking variables
+    all_step_spatial_attns = [] # Will store raw visual attention maps: (steps, layers, T, H_out, W_out)
     generated_token_strs = []
     
     try:
@@ -305,9 +295,9 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
         generated_token_strs.append("<prefill>")
         
-        # Calculate Rollout for all layers at Prefill stage
-        for l in range(1, num_layers + 1):
-            layer_idx = l - 1
+        # Extract raw attention for all layers at Prefill stage (last prompt token index -1)
+        prefill_attns = []
+        for layer_idx in range(num_layers):
             if layer_idx in attn_capture_state.captured_files:
                 file_path = attn_capture_state.captured_files[layer_idx]
                 A_l = torch.load(file_path).float().numpy()
@@ -316,24 +306,17 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
                 try:
                     os.remove(file_path)
                 except Exception as e:
-                    print(f"Warning: Could not remove temp file {file_path}: {e}")
-            else:
-                print(f"Warning: Prefill attention for layer {layer_idx} not captured. Using identity.")
-                A_l = np.eye(prompt_len, dtype=np.float32)
+                    pass
                 
-            # Apply Rollout formulation: R_l = (0.5 * A_l + 0.5 * I) @ R_{l-1}
-            A_scaled = 0.5 * A_l + 0.5 * np.eye(prompt_len, dtype=np.float32)
-            prev_rollout = rollout_table[l-1].astype(np.float32)
-            rollout_table[l] = (A_scaled @ prev_rollout).astype(np.float16)
-            
-        # Store Prefill visual rollout (last prompt token index -1)
-        prefill_rollouts = []
-        for l in range(1, num_layers + 1):
-            prefill_vector = rollout_table[l, -1, :].astype(np.float32) # Convert to float32 for processing
-            reshaped = prefill_vector.reshape(T, H_out, W_out)
-            prefill_layers = np.array(reshaped)
-            prefill_rollouts.append(prefill_layers)
-        all_step_spatial_rollouts.append(prefill_rollouts)
+                # Raw attention from last prompt token (predicting first output token) to visual tokens
+                attn_vector = A_l[-1, visual_positions]
+            else:
+                print(f"Warning: Prefill attention for layer {layer_idx} not captured. Using uniform.")
+                attn_vector = np.ones(V, dtype=np.float32) / V
+                
+            reshaped = attn_vector.reshape(T, H_out, W_out)
+            prefill_attns.append(reshaped)
+        all_step_spatial_attns.append(prefill_attns)
         
         # Step 1+: Autoregressive generation steps
         stop_token_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
@@ -344,14 +327,6 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
                 
             token_str = tokenizer.decode([next_token_id.item()])
             generated_token_strs.append(token_str)
-            
-            # Expand the rollout table sequence length by 1 for the new token
-            current_len = rollout_table.shape[1]
-            new_rollout_table = np.zeros((num_layers + 1, current_len + 1, V), dtype=np.float16)
-            new_rollout_table[:, :current_len, :] = rollout_table
-            # Initialize layer 0 for the new text token as zero
-            new_rollout_table[0, current_len, :] = 0.0
-            rollout_table = new_rollout_table
             
             # Reset state for current single-token forward pass
             attn_capture_state.captured_tensors.clear()
@@ -368,32 +343,18 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             past_key_values = outputs.past_key_values
             next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
             
-            # Update Causal Rollout for the new generated token (at index current_len)
-            for l in range(1, num_layers + 1):
-                layer_idx = l - 1
-                if layer_idx not in attn_capture_state.captured_tensors:
-                    # Fallback to copy from previous layer
-                    rollout_table[l, current_len, :] = rollout_table[l-1, current_len, :]
-                    continue
-                # Attention vector from the new token to all past tokens: shape (current_len + 1,)
-                A_l_step = attn_capture_state.captured_tensors[layer_idx][0].float().numpy()
-                
-                # Causal Rollout equation:
-                # rollout[l, new] = (0.5 + 0.5 * A_self) * rollout[l-1, new] + 0.5 * sum(A_past * rollout[l-1, past])
-                self_attn = A_l_step[-1]
-                past_attn = A_l_step[:-1]
-                
-                val_self = (0.5 + 0.5 * self_attn) * rollout_table[l-1, current_len, :].astype(np.float32)
-                val_past = 0.5 * (past_attn @ rollout_table[l-1, :current_len, :].astype(np.float32))
-                rollout_table[l, current_len, :] = (val_self + val_past).astype(np.float16)
-                                                   
-            # Store rollout visual heatmap for the newly generated token at Layer 1 to L
-            step_rollouts = []
-            for l in range(1, num_layers + 1):
-                step_vector = rollout_table[l, current_len, :].astype(np.float32) # Convert to float32
-                reshaped = step_vector.reshape(T, H_out, W_out)
-                step_rollouts.append(np.array(reshaped))
-            all_step_spatial_rollouts.append(step_rollouts)
+            # Extract raw attention for all layers at this decode step
+            step_attns = []
+            for layer_idx in range(num_layers):
+                if layer_idx in attn_capture_state.captured_tensors:
+                    A_l_step = attn_capture_state.captured_tensors[layer_idx][0].float().numpy()
+                    attn_vector = A_l_step[visual_positions]
+                else:
+                    attn_vector = np.ones(V, dtype=np.float32) / V
+                    
+                reshaped = attn_vector.reshape(T, H_out, W_out)
+                step_attns.append(reshaped)
+            all_step_spatial_attns.append(step_attns)
             
             # Print token generated in progress
             print(f"      [Step {step+1}] Generated Token: {repr(token_str)}")
@@ -410,7 +371,7 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             try:
                 shutil.rmtree(attn_capture_state.temp_dir)
             except Exception as e:
-                print(f"Warning: Could not remove temp directory: {e}")
+                pass
             
     # Cleanup memory
     import gc
@@ -420,7 +381,7 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         
     return {
         "generated_tokens": generated_token_strs,
-        "attentions": all_step_spatial_rollouts, # shape: (steps, layers, T_out, H_out, W_out)
+        "attentions": all_step_spatial_attns, # shape: (steps, layers, T, H_out, W_out)
         "num_layers": num_layers,
         "T": T,
         "T_out": T_out,
