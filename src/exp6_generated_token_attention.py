@@ -560,19 +560,25 @@ def main():
     if args.video_path:
         instances = [get_associated_files(args.video_path)]
     else:
-        # Default to a representative video with f <= 2.0 and c <= 4 (easy/medium regime)
-        default_dir = "videos/temporal/blinking"
+        # Default to a representative C2 bounce ball video
+        default_dir = "videos/temporal/bounce_ball"
         if os.path.exists(default_dir):
             all_instances = find_video_files(default_dir)
             easy_instances = [
                 inst for inst in all_instances 
-                if inst["metadata"]["count"] is not None 
-                and inst["metadata"]["count"] <= 4
-                and inst["metadata"]["frequency"] is not None
-                and inst["metadata"]["frequency"] <= 2.0
+                if inst["metadata"]["count"] == 2
             ]
             if easy_instances:
-                instances = easy_instances[:1]
+                # Prefer f0.5 and s0 if available
+                matching_subset = [
+                    inst for inst in easy_instances 
+                    if inst["metadata"].get("seed") == 0 
+                    and inst["metadata"].get("frequency") == 0.5
+                ]
+                if matching_subset:
+                    instances = matching_subset[:1]
+                else:
+                    instances = easy_instances[:1]
             else:
                 instances = all_instances[:1]
         else:
