@@ -1,0 +1,21 @@
+Let's analyze the video frame by frame.
+
+At **0:00**, the yellow ball is shown **just touching** the right paddle. This is the **initial contact** — not yet a bounce.
+
+At **0:01**, the ball is **moving away** from the right paddle, indicating it has **just bounced off** the right paddle. This is the **first bounce**.
+
+At **0:02**, the ball is **moving toward** the left paddle.
+
+At **0:03**, the ball is **just touching** the left paddle — this is the **second contact**, but not yet a bounce.
+
+At **0:04**, the ball is **moving away** from the left paddle — this is the **second bounce**.
+
+From **0:05 to 0:24**, the ball is **stationary** in the center, between the paddles, and there are **no further movements** or contacts.
+
+Therefore, the ball bounced **twice**:
+- First bounce: off the right paddle at 0:01.
+- Second bounce: off the left paddle at 0:04.
+
+The ball does not bounce again after that.
+
+Final Answer: $\boxed{2}$

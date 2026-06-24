@@ -208,11 +208,12 @@ def load_video_frames(video_path, num_target_frames):
     print("Warning: Could not read video frames using decord, torchvision, or cv2. Using dummy frames.")
     return [np.ones((224, 224, 3), dtype=np.uint8) * 255 for _ in range(num_target_frames)]
 
-def run_generated_token_attention_rollout(model, inputs, processor, max_new_tokens=60):
+def run_generated_token_attention_rollout(model, inputs, processor, max_new_tokens=60, forced_token_ids=None):
     """
     Runs custom autoregressive generation with KV caching and offloaded
     attention weights to compute the formal Causal Attention Rollout mapping
     back to the input visual tokens for each generated token.
+    Supports teacher-forced decoding if forced_token_ids is provided.
     """
     device = next(model.parameters()).device
     tokenizer = processor.tokenizer
@@ -292,7 +293,10 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             outputs = model(**inputs, use_cache=True)
             
         past_key_values = outputs.past_key_values
-        next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
+        if forced_token_ids is not None and len(forced_token_ids) > 0:
+            next_token_id = torch.tensor([forced_token_ids[0]], device=device)
+        else:
+            next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
         generated_token_strs.append("<prefill>")
         
         # Extract raw attention for all layers at Prefill stage (last prompt token index -1)
@@ -321,8 +325,10 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         # Step 1+: Autoregressive generation steps
         stop_token_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
         
-        for step in range(max_new_tokens):
-            if next_token_id.item() == stop_token_id:
+        loop_limit = len(forced_token_ids) if forced_token_ids is not None else max_new_tokens
+        
+        for step in range(loop_limit):
+            if forced_token_ids is None and next_token_id.item() == stop_token_id:
                 break
                 
             token_str = tokenizer.decode([next_token_id.item()])
@@ -341,7 +347,6 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
                 outputs = model(**single_inputs)
                 
             past_key_values = outputs.past_key_values
-            next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
             
             # Extract raw attention for all layers at this decode step
             step_attns = []
@@ -357,8 +362,16 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             all_step_spatial_attns.append(step_attns)
             
             # Print token generated in progress
-            print(f"      [Step {step+1}] Generated Token: {repr(token_str)}")
+            print(f"      [Step {step+1}/{loop_limit}] Generated Token: {repr(token_str)}")
             
+            if forced_token_ids is not None:
+                if step < len(forced_token_ids) - 1:
+                    next_token_id = torch.tensor([forced_token_ids[step + 1]], device=device)
+                else:
+                    break
+            else:
+                next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
+                
     finally:
         # Disable attention capture
         attn_capture_state.enabled = False
@@ -501,6 +514,8 @@ def main():
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     parser.add_argument("--prompt-mode", type=str, default="direct", choices=["cot", "direct"], help="Prompting mode")
     parser.add_argument("--max-new-tokens", type=int, default=100, help="Max tokens to generate")
+    parser.add_argument("--force-text-path", type=str, default=None, help="Path to text file containing target response to force decode")
+    parser.add_argument("--plot-all-tokens", action="store_true", help="Plot heatmaps for all generated tokens instead of filtering")
     args = parser.parse_args()
     
     model, processor = load_model_and_processor(
@@ -508,6 +523,17 @@ def main():
         device=args.device,
         attn_implementation="eager"
     )
+    
+    forced_token_ids = None
+    if args.force_text_path:
+        if not os.path.exists(args.force_text_path):
+            print(f"Error: Forced text file not found at {args.force_text_path}")
+            return
+        with open(args.force_text_path, "r", encoding="utf-8") as f:
+            forced_text = f.read().strip()
+        print(f"Loaded forced text ({len(forced_text)} chars). Tokenizing...")
+        forced_token_ids = processor.tokenizer.encode(forced_text, add_special_tokens=False)
+        print(f"Forced sequence contains {len(forced_token_ids)} tokens.")
     
     if args.video_path:
         instances = [get_associated_files(args.video_path)]
@@ -562,8 +588,8 @@ def main():
                 
         question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
         # Prepare visual inputs at 2.0 FPS
-        # Prefill \boxed{ in direct mode to steer the model to output the count directly
-        prefill_boxed = (args.prompt_mode == "direct")
+        # Prefill \boxed{ in direct mode (if not teacher-forcing) to steer the model to output the count directly
+        prefill_boxed = (args.prompt_mode == "direct" and not args.force_text_path)
         inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0, prefill_boxed=prefill_boxed)
         
         video_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -575,7 +601,13 @@ def main():
             os.makedirs(temp_dir, exist_ok=True)
             attn_capture_state.temp_dir = temp_dir
             
-            results = run_generated_token_attention_rollout(model, inputs, processor, max_new_tokens=args.max_new_tokens)
+            results = run_generated_token_attention_rollout(
+                model, 
+                inputs, 
+                processor, 
+                max_new_tokens=args.max_new_tokens,
+                forced_token_ids=forced_token_ids
+            )
             results["video_name"] = os.path.basename(video_path)
             results["prompt"] = question_text
             
@@ -591,17 +623,30 @@ def main():
             
             # Print the full generated answer
             full_gen = "".join(tokens[1:])
-            if args.prompt_mode == "direct":
+            if args.prompt_mode == "direct" and not args.force_text_path:
                 full_gen = "\\boxed{" + full_gen
             print(f"\n    === Generated Response for {video_name} ({args.prompt_mode.upper()}) ===")
             print(f"    {full_gen.strip()}")
             print(f"    ==================================================\n")
             
-            # We plot the heatmap for all actual generated tokens (excluding <prefill> and stop tokens)
+            # We plot the heatmap for selected tokens (excluding <prefill> and stop tokens)
             target_indices = []
             for idx in range(1, len(tokens)):
                 if tokens[idx] not in ["<|im_end|>", "<|endoftext|>"]:
-                    target_indices.append(idx)
+                    if args.plot_all_tokens:
+                        target_indices.append(idx)
+                    else:
+                        token_lower = tokens[idx].lower()
+                        # Match digits
+                        has_digit = any(char.isdigit() for char in token_lower)
+                        # Match key terms
+                        keywords = ["bounce", "touch", "contact", "first", "second", "stationary", "movement", "twice", "boxed"]
+                        has_keyword = any(kw in token_lower for kw in keywords)
+                        if has_digit or has_keyword:
+                            target_indices.append(idx)
+            
+            print(f"    Filtering tokens for spatial heatmap overlays (plotting key concepts / numbers)...")
+            print(f"    Plotting {len(target_indices)} out of {len(tokens) - 1} generated tokens.")
                 
             for token_idx in target_indices:
                 safe_token_name = "".join([c if c.isalnum() else "_" for c in tokens[token_idx]]).strip("_")
