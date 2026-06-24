@@ -486,14 +486,10 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
         return
         
     token_str = tokens[token_idx]
-    attentions = results["attentions"][token_idx] # shape: (layers, T_actual, H_out, W_out)
-    T_actual = attentions.shape[1]
-    
     num_layers = results["num_layers"]
     layer_idx = target_layer if target_layer >= 0 else num_layers + target_layer
-    
-    # shape: (T_actual, H_out, W_out)
-    token_layer_attn = attentions[layer_idx]
+    token_layer_attn = np.array(results["attentions"][token_idx][layer_idx])
+    T_actual = token_layer_attn.shape[0]
     
     # Load exactly T_actual frames from the video to serve as background
     print(f"    Loading {T_actual} video frames for heatmap overlay...")
