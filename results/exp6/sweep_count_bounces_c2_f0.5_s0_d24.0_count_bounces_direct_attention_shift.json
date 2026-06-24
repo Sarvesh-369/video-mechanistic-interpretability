@@ -1,0 +1,13 @@
+{
+  "video_name": "sweep_count_bounces_c2_f0.5_s0_d24.0_count_bounces.mp4",
+  "prompt": "How many times did the ball bounce?\n\nRespond ONLY with the final count wrapped in \\boxed{} (e.g., \\boxed{3}). Do not include any other text, reasoning, intro, or numbered lists. Write nothing else.",
+  "generated_tokens": [
+    "<prefill>",
+    "1"
+  ],
+  "T": 24,
+  "T_out": 12,
+  "H_out": 16,
+  "W_out": 30,
+  "num_layers": 36
+}
