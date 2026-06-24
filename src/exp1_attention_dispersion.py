@@ -323,7 +323,7 @@ def main():
                         raw_question = f.read().strip()
                         
                 question_text = format_prompt_by_mode(raw_question, prompt_mode)
-                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=1.0)
+                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=1.0, prefill_boxed=(prompt_mode == "direct"))
                 
                 try:
                     results = extract_temporal_attention(model, inputs, processor, query_token_pos=-1)
@@ -339,6 +339,8 @@ def main():
                             generated_ids = model.generate(**inputs, max_new_tokens=512)
                             generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
                             generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                            if prompt_mode == "direct" and not generated_text.startswith("\\boxed{"):
+                                generated_text = "\\boxed{" + generated_text
                         results["generated_response"] = generated_text
                         print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
                     else:

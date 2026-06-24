@@ -601,7 +601,7 @@ def main():
                 
         question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
         # Prepare visual inputs at 2.0 FPS
-        inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0)
+        inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0, prefill_boxed=(args.prompt_mode == "direct"))
         
         video_name = os.path.splitext(os.path.basename(video_path))[0]
         print(f"\nProcessing Generated Token Attention for {video_name} (Mode: {args.prompt_mode.upper()}, 2.0 FPS)...")
@@ -628,6 +628,8 @@ def main():
             
             # Print the full generated answer
             full_gen = "".join(tokens[1:])
+            if args.prompt_mode == "direct" and not full_gen.startswith("\\boxed{"):
+                full_gen = "\\boxed{" + full_gen
             print(f"\n    === Generated Response for {video_name} ({args.prompt_mode.upper()}) ===")
             print(f"    {full_gen.strip()}")
             print(f"    ==================================================\n")

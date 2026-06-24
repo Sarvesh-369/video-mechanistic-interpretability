@@ -57,7 +57,7 @@ def load_model_and_processor(model_id=DEFAULT_MODEL_ID, device="cuda", flash_att
     return model, processor
 
 
-def prepare_video_inputs(video_path, question_text, processor, device="cuda", fps=2.0):
+def prepare_video_inputs(video_path, question_text, processor, device="cuda", fps=2.0, prefill_boxed=False):
     """
     Prepares Hugging Face model inputs for a video and question.
     
@@ -127,6 +127,8 @@ def prepare_video_inputs(video_path, question_text, processor, device="cuda", fp
     
     # Formulate chat template prompt
     text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    if prefill_boxed:
+        text += "\\boxed{"
     
     # Process images and videos via qwen_vl_utils helper
     image_inputs, video_inputs = process_vision_info(messages)

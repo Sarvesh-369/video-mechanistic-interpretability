@@ -198,7 +198,7 @@ def main():
                     
                 print(f"  Running Logit Lens ({cohort_label}) on: {os.path.basename(video_path)} (GT Count = {ground_truth})")
                 
-                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device)
+                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, prefill_boxed=(prompt_mode == "direct"))
                 
                 correct_token_str = str(ground_truth)
                 alternative_token_strs = [str(ground_truth - 1), str(ground_truth - 2), str(ground_truth + 1)]
@@ -215,6 +215,8 @@ def main():
                         generated_ids = model.generate(**inputs, max_new_tokens=512)
                         generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)]
                         generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                        if prompt_mode == "direct" and not generated_text.startswith("\\boxed{"):
+                            generated_text = "\\boxed{" + generated_text
                     results["generated_response"] = generated_text
                     print(f"    Generated Response: {generated_text.strip().replace(chr(10), ' ')}")
                     
