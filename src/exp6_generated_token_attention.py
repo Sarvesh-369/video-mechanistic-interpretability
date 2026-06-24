@@ -630,7 +630,11 @@ def main():
             tokens = results["generated_tokens"]
             print(f"    Generated {len(tokens)} tokens in total.")
             
-            target_indices = [idx for idx in [5, 10, 15, 20, 30] if idx < len(tokens)]
+            if len(tokens) <= 6:
+                target_indices = list(range(1, len(tokens)))
+            else:
+                target_indices = [idx for idx in [1, 5, 10, 15, 20, 30] if idx < len(tokens)]
+                
             for token_idx in target_indices:
                 safe_token_name = "".join([c if c.isalnum() else "_" for c in tokens[token_idx]]).strip("_")
                 if not safe_token_name:
