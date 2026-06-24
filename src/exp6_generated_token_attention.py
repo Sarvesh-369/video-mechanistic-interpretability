@@ -539,7 +539,7 @@ def main():
     parser.add_argument("--output-dir", type=str, default="results/exp6", help="Output directory")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     parser.add_argument("--prompt-mode", type=str, default="direct", choices=["cot", "direct"], help="Prompting mode")
-    parser.add_argument("--max-new-tokens", type=int, default=60, help="Max tokens to generate")
+    parser.add_argument("--max-new-tokens", type=int, default=100, help="Max tokens to generate")
     args = parser.parse_args()
     
     model, processor = load_model_and_processor(
@@ -601,7 +601,9 @@ def main():
                 
         question_text = format_prompt_by_mode(raw_question, args.prompt_mode)
         # Prepare visual inputs at 2.0 FPS
-        inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0, prefill_boxed=(args.prompt_mode == "direct"))
+        # Prefill \boxed{ in direct mode to steer the model to output the count directly
+        prefill_boxed = (args.prompt_mode == "direct")
+        inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0, prefill_boxed=prefill_boxed)
         
         video_name = os.path.splitext(os.path.basename(video_path))[0]
         print(f"\nProcessing Generated Token Attention for {video_name} (Mode: {args.prompt_mode.upper()}, 2.0 FPS)...")
@@ -628,7 +630,7 @@ def main():
             
             # Print the full generated answer
             full_gen = "".join(tokens[1:])
-            if args.prompt_mode == "direct" and not full_gen.startswith("\\boxed{"):
+            if args.prompt_mode == "direct":
                 full_gen = "\\boxed{" + full_gen
             print(f"\n    === Generated Response for {video_name} ({args.prompt_mode.upper()}) ===")
             print(f"    {full_gen.strip()}")
