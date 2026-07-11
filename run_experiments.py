@@ -14,35 +14,23 @@ def main():
         print("Usage:")
         print("  python run_experiments.py <experiment> [args...]\n")
         print("Available Experiments:")
-        print("  1 | exp1 : Spatio-Temporal Attention Dispersion / Entropy")
-        print("  2 | exp2 : Hidden Representation Cosine Similarity / PCA Trajectory")
-        print("  3 | exp3 : State Probing (ON/OFF classifications)")
-        print("  4 | exp4 : Preprocessing Overrides & Ablation Study")
-        print("  5 | exp5 : Logit Lens Vocabulary Projection Profile")
-        print("  6 | exp6 : Generated Token Visual Attention Tracking")
+        print("  1 | exp1 : State Probing (ON/OFF classifications)")
+        print("  2 | exp2 : Generated Token Visual Attention Rollout")
         sys.exit(1)
         
     exp_key = sys.argv[1].lower()
     
     # Map input route to target module name in src
     route_map = {
-        "1": "src.exp1_attention_dispersion",
-        "exp1": "src.exp1_attention_dispersion",
-        "2": "src.exp2_representation_similarity",
-        "exp2": "src.exp2_representation_similarity",
-        "3": "src.exp3_linear_probing",
-        "exp3": "src.exp3_linear_probing",
-        "4": "src.exp4_preprocessing_ablation",
-        "exp4": "src.exp4_preprocessing_ablation",
-        "5": "src.exp5_logit_lens",
-        "exp5": "src.exp5_logit_lens",
-        "6": "src.exp6_generated_token_attention",
-        "exp6": "src.exp6_generated_token_attention",
+        "1": "src.exp1_linear_probing",
+        "exp1": "src.exp1_linear_probing",
+        "2": "src.exp2_generated_token_attention",
+        "exp2": "src.exp2_generated_token_attention",
     }
     
     if exp_key not in route_map:
         print(f"Error: Unknown experiment selection '{sys.argv[1]}'")
-        print("Choose from: 1, 2, 3, 4, 5, exp1, exp2, exp3, exp4, exp5")
+        print("Choose from: 1, 2, exp1, exp2")
         sys.exit(1)
         
     target_module = route_map[exp_key]
