@@ -194,6 +194,13 @@ def main():
         args.position = "early"
         args.regularity = "periodic"
         
+    # Check if files already exist to skip rendering
+    final_video_path = out_dir / "questions" / f"{base_name}.mp4"
+    final_json_path = out_dir / "questions" / f"{base_name}.json"
+    if final_video_path.exists() and final_json_path.exists():
+        print(f"Skipping {base_name} (already exists).")
+        return
+
     print(f"Rendering: {base_name} (Count={args.count}, Span={args.span}s, Pos={args.position}, Reg={args.regularity})")
     
     scene = CustomBouncingBall(
