@@ -16,7 +16,7 @@ class AttnCaptureState:
 
 attn_capture_state = AttnCaptureState()
 
-def compute_rollout_for_position(target_position, target_layer, num_layers, prompt_len, decode_attns, captured_files, visual_positions, T, H_out, W_out):
+def compute_rollout_for_position(target_position, target_layer, num_layers, prompt_len, decode_attns, captured_files, visual_positions, T_out, H_out, W_out):
     """
     Computes target-specific attention rollout for a target sequence position
     at a target layer index (0 to num_layers-1), mapping back to the visual tokens.
@@ -63,7 +63,7 @@ def compute_rollout_for_position(target_position, target_layer, num_layers, prom
     # Extract only the visual token positions
     valid_vis_pos = [pos for pos in visual_positions if pos < curr_len]
     if not valid_vis_pos:
-        return np.zeros((T, H_out, W_out), dtype=np.float32)
+        return np.zeros((T_out, H_out, W_out), dtype=np.float32)
         
     vis_relevance = relevance[valid_vis_pos].numpy()
     
@@ -73,8 +73,18 @@ def compute_rollout_for_position(target_position, target_layer, num_layers, prom
         padded[:len(vis_relevance)] = vis_relevance
         vis_relevance = padded
         
-    # Reshape to (T, H_out, W_out)
-    return vis_relevance.reshape(T, H_out, W_out)
+    # Fallback/Safety Check: Ensure dimensions match exactly T_out * H_out * W_out
+    expected_size = T_out * H_out * W_out
+    if len(vis_relevance) != expected_size:
+        if len(vis_relevance) > expected_size:
+            vis_relevance = vis_relevance[:expected_size]
+        else:
+            padded = np.zeros(expected_size, dtype=np.float32)
+            padded[:len(vis_relevance)] = vis_relevance
+            vis_relevance = padded
+            
+    # Reshape to (T_out, H_out, W_out)
+    return vis_relevance.reshape(T_out, H_out, W_out)
 
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     batch, num_key_value_heads, seqlen, head_dim = hidden_states.shape
@@ -286,6 +296,14 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
     vocab = tokenizer.get_vocab()
     vision_start_id = vocab.get("<|vision_start|>", 151652)
     vision_end_id = vocab.get("<|vision_end|>", 151653)
+    video_pad_id = vocab.get("<|video_pad|>", None)
+    image_pad_id = vocab.get("<|image_pad|>", None)
+    if video_pad_id is None:
+        video_pad_id = getattr(processor, "video_token_id", None)
+    if image_pad_id is None:
+        image_pad_id = getattr(processor, "image_token_id", None)
+        
+    visual_ids = [vid for vid in [video_pad_id, image_pad_id] if vid is not None]
     
     start_pos = (input_ids == vision_start_id).nonzero(as_tuple=True)[0]
     end_pos = (input_ids == vision_end_id).nonzero(as_tuple=True)[0]
@@ -293,11 +311,16 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
     if len(start_pos) == 0 or len(end_pos) == 0:
         raise ValueError("Could not locate <|vision_start|> or <|vision_end|> tokens.")
         
-    # Collect all visual token positions in input_ids
-    visual_positions = []
-    for s_pos, e_pos in zip(start_pos, end_pos):
-        visual_positions.extend(range(s_pos.item() + 1, e_pos.item()))
+    visual_mask = torch.zeros_like(input_ids, dtype=torch.bool)
+    for vid in visual_ids:
+        visual_mask = visual_mask | (input_ids == vid)
         
+    in_vision_bounds = torch.zeros_like(input_ids, dtype=torch.bool)
+    for s_pos, e_pos in zip(start_pos, end_pos):
+        in_vision_bounds[s_pos.item() + 1 : e_pos.item()] = True
+    visual_mask = visual_mask & in_vision_bounds
+    
+    visual_positions = visual_mask.nonzero(as_tuple=True)[0].cpu().numpy().tolist()
     V = len(visual_positions)
     
     # Get grid information
@@ -419,7 +442,7 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
                     decode_attns=attn_capture_state.decode_attns,
                     captured_files=attn_capture_state.captured_files,
                     visual_positions=visual_positions,
-                    T=T,
+                    T_out=T_out,
                     H_out=H_out,
                     W_out=W_out
                 )
