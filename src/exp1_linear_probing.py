@@ -62,16 +62,16 @@ def parse_trace_states(trace_path, T, duration):
                 else:
                     state = 1
         elif is_state_machine:
-            # State Machine domain: 4-class classification
-            # Assigning unique integer classes: RED=0, YELLOW=1, GREEN=2, BLUE=3
-            if "RED" in line:
-                state = 0
-            elif "YELLOW" in line:
-                state = 1
-            elif "GREEN" in line:
-                state = 2
-            elif "BLUE" in line:
-                state = 3
+            # State Machine domain: 10-class classification
+            # Assigning unique integer classes for all possible colors
+            color_map = {
+                "BLUE": 0, "RED": 1, "GREEN": 2, "YELLOW": 3, "PURPLE": 4,
+                "ORANGE": 5, "PINK": 6, "TEAL": 7, "GOLD": 8, "MAROON": 9
+            }
+            for c_name, c_idx in color_map.items():
+                if c_name in line:
+                    state = c_idx
+                    break
         else:
             # Blinking domain: ON vs OFF
             if "appears" in line:
