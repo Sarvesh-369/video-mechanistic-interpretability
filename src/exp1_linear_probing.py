@@ -62,16 +62,16 @@ def parse_trace_states(trace_path, T, duration):
                 else:
                     state = 1
         elif is_state_machine:
-            # State Machine domain: color mapping
-            # Primary split: warm colors (RED, YELLOW) = 1, cool/others (GREEN, BLUE) = 0
-            for c in ["RED", "YELLOW"]:
-                if c in line:
-                    state = 1
-                    break
-            for c in ["GREEN", "BLUE"]:
-                if c in line:
-                    state = 0
-                    break
+            # State Machine domain: 4-class classification
+            # Assigning unique integer classes: RED=0, YELLOW=1, GREEN=2, BLUE=3
+            if "RED" in line:
+                state = 0
+            elif "YELLOW" in line:
+                state = 1
+            elif "GREEN" in line:
+                state = 2
+            elif "BLUE" in line:
+                state = 3
         else:
             # Blinking domain: ON vs OFF
             if "appears" in line:
@@ -161,9 +161,17 @@ def plot_probe_predictions(y_true, y_pred, output_image_path, title):
     plt.step(range(T), y_true, where='post', label='Ground Truth State', color='green', linewidth=2)
     plt.step(range(T), y_pred, where='post', label='Linear Probe Predicted', color='orange', linestyle='--', linewidth=2)
     plt.xlabel('Time Step (t)')
-    plt.ylabel('State (ON=1, OFF=0)')
+    
+    min_val = min(np.min(y_true), np.min(y_pred))
+    max_val = max(np.max(y_true), np.max(y_pred))
+    plt.ylabel('State Class')
     plt.title(title)
-    plt.ylim([-0.2, 1.2])
+    plt.ylim([min_val - 0.5, max_val + 0.5])
+    
+    # Add integer ticks for y-axis
+    unique_vals = sorted(list(set(y_true) | set(y_pred)))
+    plt.yticks(unique_vals)
+    
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
