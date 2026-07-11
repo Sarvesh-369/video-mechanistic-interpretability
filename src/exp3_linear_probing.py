@@ -231,8 +231,7 @@ def main():
         else:
             target_names = ["OFF", "ON"]
             
-        # 1. Collect training data and train the probe
-        print(f"\n--- 1. Collecting Probing Training Data for '{domain_name}' (Event Count <= 3) ---")
+        # Resolve instances once
         train_instances = find_video_files(train_dir)
         easy_train_instances = [inst for inst in train_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] <= 3]
         
@@ -240,100 +239,107 @@ def main():
         shuffled_train = list(easy_train_instances)
         random.Random(42).shuffle(shuffled_train)
         easy_train_instances = shuffled_train[:args.max_train_videos]
-        
-        X_train_list, y_train_list, _, _ = collect_features_and_labels(
-            model, processor, easy_train_instances, args.layer_idx, args.device,
-            crop_active_only=not args.no_crop_active, crop_buffer=args.crop_buffer
-        )
-        
-        if not X_train_list:
-            print(f"Error: No training representations collected for {domain_name}.")
-            continue
-            
-        X_train = np.concatenate(X_train_list, axis=0)
-        y_train = np.concatenate(y_train_list, axis=0)
-        
-        class_weight = None if args.no_class_balance else "balanced"
-        print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.regularization_c}, class_weight={class_weight})...")
-        probe = LogisticRegression(max_iter=1000, C=args.regularization_c, class_weight=class_weight)
-        probe.fit(X_train, y_train)
-        
-        train_acc = accuracy_score(y_train, probe.predict(X_train))
-        print(f"Probe Train Accuracy: {train_acc:.4f}")
-        
-        # Save the trained linear probe model to be used later
-        probe_path = os.path.join(output_dir, "linear_probe_model.pkl")
-        with open(probe_path, "wb") as f:
-            pickle.dump(probe, f)
-        print(f"Saved trained linear probe model to {probe_path}")
-        
-        # 2. Collect evaluation data
-        print(f"\n--- 2. Collecting Evaluation Data for '{domain_name}' ---")
+
         eval_instances = []
         if video_path:
             eval_instances.append(get_associated_files(video_path))
             print(f"Targeting single test video: {video_path}")
         else:
-            # Find test instances with event count >= 5
             test_instances = find_video_files(test_dir)
             hard_test_instances = [inst for inst in test_instances if inst["metadata"]["count"] is not None and inst["metadata"]["count"] >= 5]
-            
-            # Shuffle deterministically to get a diverse mix of test instances
             shuffled_test = list(hard_test_instances)
             random.Random(42).shuffle(shuffled_test)
             eval_instances = shuffled_test[:15]
             print(f"Targeting test directory: {test_dir} (Selected {len(eval_instances)} diverse hard instances)")
-            
-        X_eval_list, y_eval_list, eval_meta, eval_names = collect_features_and_labels(
-            model, processor, eval_instances, args.layer_idx, args.device,
-            crop_active_only=not args.no_crop_active, crop_buffer=args.crop_buffer
-        )
+
+        # Run linear probing for both Layer 34 (index -2) and Layer 35 (index -1) by default
+        target_layers = [-2, -1] if args.layer_idx == -2 else [args.layer_idx]
         
-        if not X_eval_list:
-            print(f"Error: No evaluation representations collected for {domain_name}.")
-            continue
+        for layer_idx in target_layers:
+            print(f"\n======================================================================")
+            print(f"Running Linear Probing on Layer {layer_idx} for '{domain_name}'")
+            print(f"======================================================================")
             
-        # Evaluate probe
-        X_eval = np.concatenate(X_eval_list, axis=0)
-        y_eval = np.concatenate(y_eval_list, axis=0)
-        y_eval_pred = probe.predict(X_eval)
-        eval_acc = accuracy_score(y_eval, y_eval_pred)
-        
-        print(f"\n--- Probing Evaluation Results for '{domain_name}' ---")
-        print(f"Probing Accuracy: {eval_acc:.4f}")
-        
-        # Compute classification report string and dict (with zero_division=0 to prevent terminal warnings)
-        report_str = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, zero_division=0)
-        report_dict = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, output_dict=True, zero_division=0)
-        print(report_str)
-        
-        # Save individual prediction plots
-        print("\nSaving predicted state trajectory plots...")
-        for i in range(min(3, len(X_eval_list))):
-            y_true_v = y_eval_list[i]
-            X_v = X_eval_list[i]
-            y_pred_v = probe.predict(X_v)
-            
-            v_name = eval_names[i]
-            out_img = os.path.join(output_dir, f"{os.path.splitext(v_name)[0]}_probe.png")
-            
-            plot_probe_predictions(
-                y_true_v, y_pred_v, out_img,
-                f"Probing Predictions for {v_name} (GT Events={eval_meta[i]['count']})"
+            # 1. Collect training data and train the probe
+            print(f"\n--- 1. Collecting Probing Training Data (Event Count <= 3) ---")
+            X_train_list, y_train_list, _, _ = collect_features_and_labels(
+                model, processor, easy_train_instances, layer_idx, args.device,
+                crop_active_only=not args.no_crop_active, crop_buffer=args.crop_buffer
             )
             
-        # Save quantitative report
-        report = {
-            "train_accuracy": float(train_acc),
-            "probing_accuracy": float(eval_acc),
-            "model_id": args.model_id,
-            "layer_idx": args.layer_idx,
-            "classification_report": report_dict
-        }
-        out_json = os.path.join(output_dir, "probing_evaluation_results.json")
-        with open(out_json, "w") as f:
-            json.dump(report, f, indent=2)
-        print(f"Finished Experiment 3 for {domain_name}! Summary saved to {out_json}")
+            if not X_train_list:
+                print(f"Error: No training representations collected for {domain_name} at layer {layer_idx}.")
+                continue
+                
+            X_train = np.concatenate(X_train_list, axis=0)
+            y_train = np.concatenate(y_train_list, axis=0)
+            
+            class_weight = None if args.no_class_balance else "balanced"
+            print(f"\nTraining Logistic Regression probe on {X_train.shape[0]} training frame representations (C={args.regularization_c}, class_weight={class_weight})...")
+            probe = LogisticRegression(max_iter=1000, C=args.regularization_c, class_weight=class_weight)
+            probe.fit(X_train, y_train)
+            
+            train_acc = accuracy_score(y_train, probe.predict(X_train))
+            print(f"Probe Train Accuracy: {train_acc:.4f}")
+            
+            # Save the trained linear probe model to be used later
+            probe_path = os.path.join(output_dir, f"linear_probe_model_layer{layer_idx}.pkl")
+            with open(probe_path, "wb") as f:
+                pickle.dump(probe, f)
+            print(f"Saved trained linear probe model to {probe_path}")
+            
+            # 2. Collect evaluation data
+            print(f"\n--- 2. Collecting Evaluation Data ---")
+            X_eval_list, y_eval_list, eval_meta, eval_names = collect_features_and_labels(
+                model, processor, eval_instances, layer_idx, args.device,
+                crop_active_only=not args.no_crop_active, crop_buffer=args.crop_buffer
+            )
+            
+            if not X_eval_list:
+                print(f"Error: No evaluation representations collected for {domain_name} at layer {layer_idx}.")
+                continue
+                
+            # Evaluate probe
+            X_eval = np.concatenate(X_eval_list, axis=0)
+            y_eval = np.concatenate(y_eval_list, axis=0)
+            y_eval_pred = probe.predict(X_eval)
+            eval_acc = accuracy_score(y_eval, y_eval_pred)
+            
+            print(f"\n--- Probing Evaluation Results for '{domain_name}' (Layer {layer_idx}) ---")
+            print(f"Probing Accuracy: {eval_acc:.4f}")
+            
+            # Compute classification report string and dict (with zero_division=0 to prevent terminal warnings)
+            report_str = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, zero_division=0)
+            report_dict = classification_report(y_eval, y_eval_pred, labels=[0, 1], target_names=target_names, output_dict=True, zero_division=0)
+            print(report_str)
+            
+            # Save individual prediction plots
+            print("\nSaving predicted state trajectory plots...")
+            for i in range(min(3, len(X_eval_list))):
+                y_true_v = y_eval_list[i]
+                X_v = X_eval_list[i]
+                y_pred_v = probe.predict(X_v)
+                
+                v_name = eval_names[i]
+                out_img = os.path.join(output_dir, f"{os.path.splitext(v_name)[0]}_probe_layer{layer_idx}.png")
+                
+                plot_probe_predictions(
+                    y_true_v, y_pred_v, out_img,
+                    f"Probing Predictions for {v_name} (Layer {layer_idx}, GT Events={eval_meta[i]['count']})"
+                )
+                
+            # Save quantitative report
+            report = {
+                "train_accuracy": float(train_acc),
+                "probing_accuracy": float(eval_acc),
+                "model_id": args.model_id,
+                "layer_idx": int(layer_idx),
+                "classification_report": report_dict
+            }
+            out_json = os.path.join(output_dir, f"probing_evaluation_results_layer{layer_idx}.json")
+            with open(out_json, "w") as f:
+                json.dump(report, f, indent=2)
+            print(f"Finished Layer {layer_idx} Experiment 3 for {domain_name}! Summary saved to {out_json}")
 
 if __name__ == "__main__":
     main()
