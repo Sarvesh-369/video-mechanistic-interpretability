@@ -160,9 +160,9 @@ def run_vlm_inference(model, processor, inputs, max_new_tokens=64):
     )[0]
     return output_text
 
-def main():
+def main(experiment_override=None):
     parser = argparse.ArgumentParser(description="Run new experimental suite (Exp 3 - Exp 8) evaluations")
-    parser.add_argument("--experiment", type=str, required=True, choices=["3", "4", "5", "6", "7", "8"], help="Experiment index to evaluate")
+    parser.add_argument("--experiment", type=str, required=(experiment_override is None), choices=["3", "4", "5", "6", "7", "8"], help="Experiment index to evaluate")
     parser.add_argument("--model-id", type=str, default="Qwen/Qwen3-VL-8B-Instruct", help="Hugging Face model ID")
     parser.add_argument("--device", type=str, default="cuda", help="Target device")
     parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode")
@@ -170,6 +170,7 @@ def main():
     parser.add_argument("--output-dir", type=str, default="results/new_results", help="Output directory")
     args = parser.parse_args()
     
+    experiment_num = experiment_override if experiment_override is not None else args.experiment
     os.makedirs(args.output_dir, exist_ok=True)
     
     # Locate all JSON files in questions directory
@@ -180,18 +181,18 @@ def main():
         
     all_jsons = list(questions_dir.glob("*.json"))
     # Filter by experiment index prefix
-    exp_jsons = [j for j in all_jsons if j.name.startswith(f"exp{args.experiment}_")]
+    exp_jsons = [j for j in all_jsons if j.name.startswith(f"exp{experiment_num}_")]
     
     # If evaluating Exp 5 (Matched Oracle), Exp 6 (Symbolic), or Exp 7 (Sequence Reconstruction), 
     # we run on the baseline Exp 3/8 videos since they represent standard/variable count distributions!
-    if args.experiment in ["5", "6", "7"]:
+    if experiment_num in ["5", "6", "7"]:
         exp_jsons = [j for j in all_jsons if j.name.startswith("exp3_") or j.name.startswith("exp8_")]
         
     if not exp_jsons:
-        print(f"No metadata files found for Experiment {args.experiment} in {questions_dir}")
+        print(f"No metadata files found for Experiment {experiment_num} in {questions_dir}")
         return
         
-    print(f"Loaded {len(exp_jsons)} metadata files for Experiment {args.experiment}")
+    print(f"Loaded {len(exp_jsons)} metadata files for Experiment {experiment_num}")
     
     # Load VLM model & processor
     model, processor = load_model_and_processor(args.model_id, device=args.device)
@@ -215,7 +216,7 @@ def main():
         print(f"\nEvaluating {base_name}: Count={count}, Span={span}s, Position={position}")
         
         try:
-            if args.experiment in ["3", "4", "8"]:
+            if experiment_num in ["3", "4", "8"]:
                 # Standard Video Counting
                 question_text = format_prompt_by_mode("How many times did the ball bounce?", args.prompt_mode)
                 inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0)
@@ -235,7 +236,7 @@ def main():
                 })
                 print(f"  VLM Output: {repr(response.strip())} -> Extracted: {pred_count} (GT: {count})")
                 
-            elif args.experiment == "5":
+            elif experiment_num == "5":
                 # Matched-Input-Length Oracle Control
                 oracle_timestamps = build_matched_oracle_sequence(bounce_times, duration=meta["duration"], target_frames=24)
                 frames = extract_frames_from_video(video_path, oracle_timestamps, total_frames=24)
@@ -268,7 +269,7 @@ def main():
                 else:
                     print("  Failed to save temporary oracle video.")
                     
-            elif args.experiment == "6":
+            elif experiment_num == "6":
                 # Symbolic Evidence Control (Text-Only Probing)
                 # Build symbolic event text
                 symbolic_events = ["EVENT"] * count
@@ -303,7 +304,7 @@ def main():
                 })
                 print(f"  Symbolic Output: {repr(response.strip())} -> Extracted: {pred_count} (GT: {count})")
                 
-            elif args.experiment == "7":
+            elif experiment_num == "7":
                 # Sequence Reconstruction / Non-count Temporal Bookkeeping
                 # Bouncing ball hits alternating walls. Let's find initial direction to build chronological ground truth sequence.
                 # Since scene places start_x=0.0, moving_right alternates.
@@ -351,10 +352,10 @@ def main():
             print(f"  Error processing {base_name}: {e}")
             
     # Save results to output JSON
-    out_path = Path(args.output_dir) / f"exp{args.experiment}_results.json"
+    out_path = Path(args.output_dir) / f"exp{experiment_num}_results.json"
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2)
-    print(f"\n✓ Saved Experiment {args.experiment} results to {out_path}")
+    print(f"\n✓ Saved Experiment {experiment_num} results to {out_path}")
 
 if __name__ == "__main__":
     main()

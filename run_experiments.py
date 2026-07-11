@@ -1,6 +1,5 @@
 import sys
 import importlib
-import re
 
 def main():
     """
@@ -33,18 +32,18 @@ def main():
         "exp1": "src.exp1_linear_probing",
         "2": "src.exp2_generated_token_attention",
         "exp2": "src.exp2_generated_token_attention",
-        "3": "src.run_new_evaluations",
-        "exp3": "src.run_new_evaluations",
-        "4": "src.run_new_evaluations",
-        "exp4": "src.run_new_evaluations",
-        "5": "src.run_new_evaluations",
-        "exp5": "src.run_new_evaluations",
-        "6": "src.run_new_evaluations",
-        "exp6": "src.run_new_evaluations",
-        "7": "src.run_new_evaluations",
-        "exp7": "src.run_new_evaluations",
-        "8": "src.run_new_evaluations",
-        "exp8": "src.run_new_evaluations",
+        "3": "src.exp3_count_span",
+        "exp3": "src.exp3_count_span",
+        "4": "src.exp4_temporal_position",
+        "exp4": "src.exp4_temporal_position",
+        "5": "src.exp5_matched_oracle",
+        "exp5": "src.exp5_matched_oracle",
+        "6": "src.exp6_symbolic_control",
+        "exp6": "src.exp6_symbolic_control",
+        "7": "src.exp7_sequence_reconstruction",
+        "exp7": "src.exp7_sequence_reconstruction",
+        "8": "src.exp8_boundary_estimation",
+        "exp8": "src.exp8_boundary_estimation",
     }
     
     if exp_key not in route_map:
@@ -54,18 +53,9 @@ def main():
         
     target_module = route_map[exp_key]
     
-    # Extract the experiment number from exp_key
-    match = re.match(r'exp(\d+)', exp_key)
-    if not match:
-        match = re.match(r'(\d+)', exp_key)
-        
     # Slice sys.argv: keep the runner script name as argv[0],
     # discard the route name (argv[1]), and forward everything else.
-    if target_module == "src.run_new_evaluations" and match:
-        exp_num = match.group(1)
-        sys.argv = [sys.argv[0], "--experiment", exp_num] + sys.argv[2:]
-    else:
-        sys.argv = [sys.argv[0]] + sys.argv[2:]
+    sys.argv = [sys.argv[0]] + sys.argv[2:]
     
     print(f"[Runner] Launching {target_module}...")
     print(f"[Runner] Forwarded arguments: {sys.argv[1:]}\n")
