@@ -86,6 +86,46 @@ def compute_rollout_for_position(target_position, target_layer, num_layers, prom
     # Reshape to (T_out, H_out, W_out)
     return vis_relevance.reshape(T_out, H_out, W_out)
 
+def compute_raw_attention_for_position(target_position, target_layer, prompt_len, decode_attns, captured_files, visual_positions, T_out, H_out, W_out):
+    """
+    Computes raw attention mapping back to the visual tokens at a specific target layer and sequence position.
+    """
+    V = len(visual_positions)
+    if target_position < prompt_len:
+        # Prefill stage: read from saved file
+        if target_layer in captured_files and os.path.exists(captured_files[target_layer]):
+            try:
+                prefill_attn = torch.load(captured_files[target_layer], map_location="cpu").float()
+                # Last prompt token is prompt_len - 1
+                attn_vector = prefill_attn[-1, visual_positions].numpy()
+            except Exception:
+                attn_vector = np.ones(V, dtype=np.float32) / V
+        else:
+            attn_vector = np.ones(V, dtype=np.float32) / V
+    else:
+        # Decode stage: read from buffer
+        step_idx = target_position - prompt_len
+        if target_layer in decode_attns and step_idx < len(decode_attns[target_layer]):
+            try:
+                row_val = decode_attns[target_layer][step_idx][0].float() # (seq_len,)
+                attn_vector = row_val[visual_positions].numpy()
+            except Exception:
+                attn_vector = np.ones(V, dtype=np.float32) / V
+        else:
+            attn_vector = np.ones(V, dtype=np.float32) / V
+            
+    # Fallback/Safety Check: Ensure dimensions match exactly T_out * H_out * W_out
+    expected_size = T_out * H_out * W_out
+    if len(attn_vector) != expected_size:
+        if len(attn_vector) > expected_size:
+            attn_vector = attn_vector[:expected_size]
+        else:
+            padded = np.zeros(expected_size, dtype=np.float32)
+            padded[:len(attn_vector)] = attn_vector
+            attn_vector = padded
+            
+    return attn_vector.reshape(T_out, H_out, W_out)
+
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     batch, num_key_value_heads, seqlen, head_dim = hidden_states.shape
     if n_rep == 1:
@@ -427,12 +467,14 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             else:
                 next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
                 
-        # Generation complete. Now compute attention rollout for all steps and layers
-        print("    Computing layer-wise attention rollout...")
+        # Generation complete. Now compute attention rollout and raw attention for all steps and layers
+        print("    Computing layer-wise attention rollout and raw attention...")
+        all_step_raw_spatial_attns = []
         for step_idx in range(len(generated_token_strs)):
             target_pos = prompt_len - 1 if step_idx <= 1 else prompt_len - 2 + step_idx
             
             step_rollouts = []
+            step_raws = []
             for layer_idx in range(num_layers):
                 rollout_map = compute_rollout_for_position(
                     target_position=target_pos,
@@ -446,8 +488,21 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
                     H_out=H_out,
                     W_out=W_out
                 )
+                raw_map = compute_raw_attention_for_position(
+                    target_position=target_pos,
+                    target_layer=layer_idx,
+                    prompt_len=prompt_len,
+                    decode_attns=attn_capture_state.decode_attns,
+                    captured_files=attn_capture_state.captured_files,
+                    visual_positions=visual_positions,
+                    T_out=T_out,
+                    H_out=H_out,
+                    W_out=W_out
+                )
                 step_rollouts.append(rollout_map)
+                step_raws.append(raw_map)
             all_step_spatial_attns.append(step_rollouts)
+            all_step_raw_spatial_attns.append(step_raws)
             
     finally:
         # Disable attention capture
@@ -473,7 +528,8 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         
     return {
         "generated_tokens": generated_token_strs,
-        "attentions": all_step_spatial_attns, # shape: (steps, layers, T, H_out, W_out)
+        "attentions": all_step_spatial_attns, # shape: (steps, layers, T_out, H_out, W_out)
+        "raw_attentions": all_step_raw_spatial_attns, # shape: (steps, layers, T_out, H_out, W_out)
         "num_layers": num_layers,
         "T": T,
         "T_out": T_out,
@@ -581,6 +637,151 @@ def plot_spatial_attention_for_token(results, token_idx, video_path, output_imag
         axes[idx].axis('off')
         
     fig.suptitle(f"Visual Attention Rollout for Token [{token_idx}] '{token_str}' (Layer {layer_idx})", fontsize=12, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(output_image_path, dpi=300)
+    plt.close()
+
+def plot_layer_by_frame_heatmap(results, token_idx, output_image_path, duration=24.0):
+    """
+    Plots a layer-by-frame heatmap (M_{l,t}) showing attention rollout relevance 
+    over video steps (x-axis) across all layers (y-axis) for a specific generated token.
+    """
+    tokens = results["generated_tokens"]
+    token_str = tokens[token_idx]
+    
+    # attentions shape: (steps, layers, T_out, H_out, W_out)
+    attentions = np.array(results["attentions"])
+    token_attn = attentions[token_idx] # (layers, T_out, H_out, W_out)
+    
+    # Sum over spatial dimensions (H_out, W_out)
+    M = np.sum(token_attn, axis=(2, 3)) # (layers, T_out)
+    
+    # Normalize per layer
+    M_norm = []
+    for l in range(M.shape[0]):
+        layer_sum = np.sum(M[l])
+        if layer_sum > 0:
+            M_norm.append(M[l] / layer_sum)
+        else:
+            M_norm.append(np.ones(M.shape[1]) / M.shape[1])
+    M_norm = np.array(M_norm) # (layers, T_out)
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(M_norm, aspect='auto', cmap='viridis', origin='lower')
+    
+    ax.set_xlabel("Video Steps (Seconds)", fontsize=10, fontweight='bold')
+    ax.set_ylabel("Transformer Layer Index", fontsize=10, fontweight='bold')
+    ax.set_title(f"Layer-by-Frame Attention Rollout for Token [{token_idx}] '{token_str}'", fontsize=12, fontweight='bold')
+    
+    T_actual = M_norm.shape[1]
+    x_ticks = range(T_actual)
+    x_labels = [f"{t * (duration / T_actual):.1f}s" for t in x_ticks]
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels(x_labels, fontsize=8, rotation=45)
+    
+    fig.colorbar(im, ax=ax, label="Normalized Relevance")
+    plt.tight_layout()
+    plt.savefig(output_image_path, dpi=300)
+    plt.close()
+
+def plot_frame_level_rollout_curve(results, token_idx, trace_path, output_image_path, target_layer=-2, duration=24.0):
+    """
+    Plots a line curve (t -> R_t) of attention rollout over time with vertical lines for events.
+    """
+    tokens = results["generated_tokens"]
+    token_str = tokens[token_idx]
+    num_layers = results["num_layers"]
+    layer_idx = target_layer if target_layer >= 0 else num_layers + target_layer
+    
+    attentions = np.array(results["attentions"])
+    token_layer_attn = attentions[token_idx][layer_idx] # (T_out, H_out, W_out)
+    R_t = np.sum(token_layer_attn, axis=(1, 2)) # (T_out,)
+    
+    # Normalize
+    r_sum = np.sum(R_t)
+    if r_sum > 0:
+        R_t = R_t / r_sum
+        
+    T_actual = len(R_t)
+    times = [t * (duration / T_actual) for t in range(T_actual)]
+    
+    # Parse event times
+    event_times = []
+    if trace_path and os.path.exists(trace_path):
+        try:
+            with open(trace_path, "r") as f:
+                trace_data = json.load(f)
+            event_times = [e[0] for e in trace_data.get("events", [])]
+        except Exception:
+            pass
+            
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.plot(times, R_t, label="Attention Rollout Relevance", color="blue", linewidth=2)
+    
+    # Draw vertical lines for event moments
+    for et in event_times:
+        ax.axvline(x=et, color="red", linestyle="--", alpha=0.8, label="Event Moment" if et == event_times[0] else "")
+        
+    ax.set_xlabel("Time (Seconds)", fontsize=10, fontweight='bold')
+    ax.set_ylabel("Relevance score", fontsize=10, fontweight='bold')
+    ax.set_title(f"Frame-level Attention Rollout Curve for Token '{token_str}' (Layer {layer_idx})", fontsize=12, fontweight='bold')
+    ax.grid(True, linestyle=":", alpha=0.6)
+    if event_times:
+        ax.legend()
+    plt.tight_layout()
+    plt.savefig(output_image_path, dpi=300)
+    plt.close()
+
+def plot_raw_vs_rollout_comparison(results, token_idx, trace_path, output_image_path, target_layer=-2, duration=24.0):
+    """
+    Plots temporal attention curve comparing raw attention vs. rollout on the same plot.
+    """
+    tokens = results["generated_tokens"]
+    token_str = tokens[token_idx]
+    num_layers = results["num_layers"]
+    layer_idx = target_layer if target_layer >= 0 else num_layers + target_layer
+    
+    # Rollout
+    attentions = np.array(results["attentions"])
+    token_layer_attn = attentions[token_idx][layer_idx] # (T_out, H_out, W_out)
+    R_t = np.sum(token_layer_attn, axis=(1, 2))
+    r_sum = np.sum(R_t)
+    if r_sum > 0:
+        R_t = R_t / r_sum
+        
+    # Raw Attention
+    raw_attentions = np.array(results["raw_attentions"])
+    token_layer_raw = raw_attentions[token_idx][layer_idx] # (T_out, H_out, W_out)
+    Raw_t = np.sum(token_layer_raw, axis=(1, 2))
+    raw_sum = np.sum(Raw_t)
+    if raw_sum > 0:
+        Raw_t = Raw_t / raw_sum
+        
+    T_actual = len(R_t)
+    times = [t * (duration / T_actual) for t in range(T_actual)]
+    
+    # Parse event times
+    event_times = []
+    if trace_path and os.path.exists(trace_path):
+        try:
+            with open(trace_path, "r") as f:
+                trace_data = json.load(f)
+            event_times = [e[0] for e in trace_data.get("events", [])]
+        except Exception:
+            pass
+            
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.plot(times, R_t, label="Causal Rollout", color="blue", linewidth=2)
+    ax.plot(times, Raw_t, label="Raw Attention", color="green", linestyle="-.", linewidth=1.5)
+    
+    for et in event_times:
+        ax.axvline(x=et, color="red", linestyle="--", alpha=0.8, label="Event Moment" if et == event_times[0] else "")
+        
+    ax.set_xlabel("Time (Seconds)", fontsize=10, fontweight='bold')
+    ax.set_ylabel("Attention Score", fontsize=10, fontweight='bold')
+    ax.set_title(f"Raw Attention vs. Rollout for Token '{token_str}' (Layer {layer_idx})", fontsize=12, fontweight='bold')
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend()
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=300)
     plt.close()
@@ -734,6 +935,26 @@ def main():
                 out_img = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_token{token_idx}_{safe_token_name}_spatial_heatmap.png")
                 plot_spatial_attention_for_token(results, token_idx, video_path, out_img, target_layer=-2, duration=duration)
                 print(f"    Saved spatial visual rollout heatmap overlay for token [{token_idx}] '{tokens[token_idx]}' to {out_img}")
+                
+            # Generate the specialized paper-style rollout analysis plots for the final answer token
+            if target_indices:
+                final_token_idx = target_indices[-1]
+                trace_path = inst.get("trace_path", None)
+                
+                # 1. Layer-by-frame heatmap (M_{l,t})
+                out_img_layer_frame = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_layer_by_frame_rollout.png")
+                plot_layer_by_frame_heatmap(results, final_token_idx, out_img_layer_frame, duration=duration)
+                print(f"    Saved layer-by-frame rollout heatmap to {out_img_layer_frame}")
+                
+                # 2. Frame-level rollout curve with event times
+                out_img_curve = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_rollout_curve_layer-2.png")
+                plot_frame_level_rollout_curve(results, final_token_idx, trace_path, out_img_curve, target_layer=-2, duration=duration)
+                print(f"    Saved frame-level rollout curve to {out_img_curve}")
+                
+                # 3. Raw vs rollout comparison with event times
+                out_img_comp = os.path.join(args.output_dir, f"{video_name}_{args.prompt_mode}_raw_vs_rollout_layer-2.png")
+                plot_raw_vs_rollout_comparison(results, final_token_idx, trace_path, out_img_comp, target_layer=-2, duration=duration)
+                print(f"    Saved raw vs rollout comparison to {out_img_comp}")
                 
             # Save results dictionary to JSON
             summary_results = {
