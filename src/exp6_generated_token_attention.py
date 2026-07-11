@@ -12,8 +12,69 @@ class AttnCaptureState:
         self.temp_dir = None
         self.captured_files = {} # layer_idx -> file_path
         self.captured_tensors = {} # layer_idx -> tensor (shape: (q_len, seq_len))
+        self.decode_attns = {} # layer_idx -> list of tensors
 
 attn_capture_state = AttnCaptureState()
+
+def compute_rollout_for_position(target_position, target_layer, num_layers, prompt_len, decode_attns, captured_files, visual_positions, T, H_out, W_out):
+    """
+    Computes target-specific attention rollout for a target sequence position
+    at a target layer index (0 to num_layers-1), mapping back to the visual tokens.
+    """
+    curr_len = target_position + 1
+    relevance = torch.zeros(curr_len, dtype=torch.float32)
+    relevance[target_position] = 1.0
+    
+    # Move backward from target_layer down to 0
+    for l in range(target_layer, -1, -1):
+        # Construct the attention matrix A of shape (curr_len, curr_len)
+        A = torch.zeros((curr_len, curr_len), dtype=torch.float32)
+        
+        # 1. Load prefill submatrix
+        if l in captured_files and os.path.exists(captured_files[l]):
+            try:
+                prefill_attn = torch.load(captured_files[l], map_location="cpu").float()
+                p_len = min(prompt_len, curr_len)
+                A[:p_len, :p_len] = prefill_attn[:p_len, :p_len]
+            except Exception as e:
+                pass
+                
+        # 2. Fill decode rows
+        if l in decode_attns:
+            for k, row in enumerate(decode_attns[l]):
+                row_idx = prompt_len + k
+                if row_idx >= curr_len:
+                    break
+                row_val = row[0].float() # (seq_len,)
+                r_len = min(row_val.shape[0], curr_len)
+                A[row_idx, :r_len] = row_val[:r_len]
+                
+        # 3. Add identity matrix for residual path
+        identity = torch.eye(curr_len, dtype=torch.float32)
+        A = A + identity
+        
+        # 4. Row normalize
+        row_sums = A.sum(dim=-1, keepdim=True).clamp_min(1e-12)
+        A = A / row_sums
+        
+        # 5. Multiply relevance vector
+        relevance = relevance @ A
+        
+    # Extract only the visual token positions
+    valid_vis_pos = [pos for pos in visual_positions if pos < curr_len]
+    if not valid_vis_pos:
+        return np.zeros((T, H_out, W_out), dtype=np.float32)
+        
+    vis_relevance = relevance[valid_vis_pos].numpy()
+    
+    # Pad if some visual positions were not reached yet due to causality
+    if len(vis_relevance) < len(visual_positions):
+        padded = np.zeros(len(visual_positions), dtype=np.float32)
+        padded[:len(vis_relevance)] = vis_relevance
+        vis_relevance = padded
+        
+    # Reshape to (T, H_out, W_out)
+    return vis_relevance.reshape(T, H_out, W_out)
 
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     batch, num_key_value_heads, seqlen, head_dim = hidden_states.shape
@@ -285,6 +346,7 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         attn_capture_state.enabled = True
         attn_capture_state.captured_files.clear()
         attn_capture_state.captured_tensors.clear()
+        attn_capture_state.decode_attns = {layer_idx: [] for layer_idx in range(num_layers)}
         
         # Step 0: Prefill (First forward pass)
         print("    Running prefill pass...")
@@ -298,29 +360,6 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
         else:
             next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
         generated_token_strs.append("<prefill>")
-        
-        # Extract raw attention for all layers at Prefill stage (last prompt token index -1)
-        prefill_attns = []
-        for layer_idx in range(num_layers):
-            if layer_idx in attn_capture_state.captured_files:
-                file_path = attn_capture_state.captured_files[layer_idx]
-                A_l = torch.load(file_path).float().numpy()
-                
-                # Delete temporary file immediately to free disk space
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    pass
-                
-                # Raw attention from last prompt token (predicting first output token) to visual tokens
-                attn_vector = A_l[-1, visual_positions]
-            else:
-                print(f"Warning: Prefill attention for layer {layer_idx} not captured. Using uniform.")
-                attn_vector = np.ones(V, dtype=np.float32) / V
-                
-            reshaped = attn_vector.reshape(T, H_out, W_out)
-            prefill_attns.append(reshaped)
-        all_step_spatial_attns.append(prefill_attns)
         
         # Step 1+: Autoregressive generation steps
         stop_token_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
@@ -348,18 +387,11 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
                 
             past_key_values = outputs.past_key_values
             
-            # Extract raw attention for all layers at this decode step
-            step_attns = []
+            # Save the captured decode attention rows for rollout
             for layer_idx in range(num_layers):
                 if layer_idx in attn_capture_state.captured_tensors:
-                    A_l_step = attn_capture_state.captured_tensors[layer_idx][0].float().numpy()
-                    attn_vector = A_l_step[visual_positions]
-                else:
-                    attn_vector = np.ones(V, dtype=np.float32) / V
-                    
-                reshaped = attn_vector.reshape(T, H_out, W_out)
-                step_attns.append(reshaped)
-            all_step_spatial_attns.append(step_attns)
+                    attn_row = attn_capture_state.captured_tensors[layer_idx] # shape: (1, seq_len)
+                    attn_capture_state.decode_attns[layer_idx].append(attn_row.clone())
             
             # Print token generated in progress
             print(f"      [Step {step+1}/{loop_limit}] Generated Token: {repr(token_str)}")
@@ -372,11 +404,35 @@ def run_generated_token_attention_rollout(model, inputs, processor, max_new_toke
             else:
                 next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
                 
+        # Generation complete. Now compute attention rollout for all steps and layers
+        print("    Computing layer-wise attention rollout...")
+        for step_idx in range(len(generated_token_strs)):
+            target_pos = prompt_len - 1 if step_idx <= 1 else prompt_len - 2 + step_idx
+            
+            step_rollouts = []
+            for layer_idx in range(num_layers):
+                rollout_map = compute_rollout_for_position(
+                    target_position=target_pos,
+                    target_layer=layer_idx,
+                    num_layers=num_layers,
+                    prompt_len=prompt_len,
+                    decode_attns=attn_capture_state.decode_attns,
+                    captured_files=attn_capture_state.captured_files,
+                    visual_positions=visual_positions,
+                    T=T,
+                    H_out=H_out,
+                    W_out=W_out
+                )
+                step_rollouts.append(rollout_map)
+            all_step_spatial_attns.append(step_rollouts)
+            
     finally:
         # Disable attention capture
         attn_capture_state.enabled = False
         attn_capture_state.captured_files.clear()
         attn_capture_state.captured_tensors.clear()
+        if hasattr(attn_capture_state, "decode_attns"):
+            attn_capture_state.decode_attns.clear()
         
         # Clean up temp directory
         if attn_capture_state.temp_dir and os.path.exists(attn_capture_state.temp_dir):
