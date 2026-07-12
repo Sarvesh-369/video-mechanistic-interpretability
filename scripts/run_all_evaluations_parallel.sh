@@ -4,28 +4,28 @@ echo "========================================================="
 echo "Starting Parallel VLM Evaluations (Exp 3 - Exp 8) on 2 GPUs"
 echo "========================================================="
 
-# 1. GPU 0 Cohort (Exp 3, 4, 5)
+# 1. GPU 0 Cohort (Exp 3, 4, 5) - targeting Port 8000
 run_gpu0() {
-    echo "[GPU 0] Starting Exp 3 (Count x Span Sweep)..."
-    CUDA_VISIBLE_DEVICES=0 python run_experiments.py exp3 --device cuda "$@"
+    echo "[GPU 0 Cohort] Starting Exp 3 (Count x Span Sweep)..."
+    python run_experiments.py exp3 --vllm-url http://localhost:8000/v1 "$@"
     
-    echo "[GPU 0] Starting Exp 4 (Temporal Position Control)..."
-    CUDA_VISIBLE_DEVICES=0 python run_experiments.py exp4 --device cuda "$@"
+    echo "[GPU 0 Cohort] Starting Exp 4 (Temporal Position Control)..."
+    python run_experiments.py exp4 --vllm-url http://localhost:8000/v1 "$@"
     
-    echo "[GPU 0] Starting Exp 5 (Matched Oracle Control)..."
-    CUDA_VISIBLE_DEVICES=0 python run_experiments.py exp5 --device cuda "$@"
+    echo "[GPU 0 Cohort] Starting Exp 5 (Matched Oracle Control)..."
+    python run_experiments.py exp5 --vllm-url http://localhost:8000/v1 "$@"
 }
 
-# 2. GPU 1 Cohort (Exp 6, 7, 8)
+# 2. GPU 1 Cohort (Exp 6, 7, 8) - targeting Port 8001
 run_gpu1() {
-    echo "[GPU 1] Starting Exp 6 (Symbolic Evidence Control)..."
-    CUDA_VISIBLE_DEVICES=1 python run_experiments.py exp6 --device cuda "$@"
+    echo "[GPU 1 Cohort] Starting Exp 6 (Symbolic Evidence Control)..."
+    python run_experiments.py exp6 --vllm-url http://localhost:8001/v1 "$@"
     
-    echo "[GPU 1] Starting Exp 7 (Sequence Reconstruction Task)..."
-    CUDA_VISIBLE_DEVICES=1 python run_experiments.py exp7 --device cuda "$@"
+    echo "[GPU 1 Cohort] Starting Exp 7 (Sequence Reconstruction Task)..."
+    python run_experiments.py exp7 --vllm-url http://localhost:8001/v1 "$@"
     
-    echo "[GPU 1] Starting Exp 8 (Capacity Boundary Estimation)..."
-    CUDA_VISIBLE_DEVICES=1 python run_experiments.py exp8 --device cuda "$@"
+    echo "[GPU 1 Cohort] Starting Exp 8 (Capacity Boundary Estimation)..."
+    python run_experiments.py exp8 --vllm-url http://localhost:8001/v1 "$@"
 }
 
 # Launch both runs in the background
