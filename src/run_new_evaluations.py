@@ -160,6 +160,52 @@ def run_vlm_inference(model, processor, inputs, max_new_tokens=64):
     )[0]
     return output_text
 
+def run_vllm_api_inference(video_path, question_text, vllm_url, model_id="Qwen/Qwen3-VL-8B-Instruct", fps=2.0):
+    """
+    Runs inference by sending request to a hosted vLLM OpenAI-compatible endpoint.
+    """
+    import requests
+    headers = {"Content-Type": "application/json"}
+    
+    content = []
+    if video_path is not None:
+        abs_video_path = os.path.abspath(video_path)
+        video_item = {
+            "type": "video",
+            "video": f"file://{abs_video_path}"
+        }
+        if fps is not None:
+            video_item["fps"] = fps
+        content.append(video_item)
+        
+    content.append({
+        "type": "text",
+        "text": question_text
+    })
+    
+    messages = [
+        {
+            "role": "user",
+            "content": content
+        }
+    ]
+    
+    payload = {
+        "model": model_id,
+        "messages": messages,
+        "max_tokens": 128,
+        "temperature": 0.0
+    }
+    
+    try:
+        response = requests.post(f"{vllm_url}/chat/completions", headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
+    except Exception as e:
+        print(f"  vLLM API Error: {e}")
+        return ""
+
 def main(experiment_override=None):
     parser = argparse.ArgumentParser(description="Run new experimental suite (Exp 3 - Exp 8) evaluations")
     parser.add_argument("--experiment", type=str, required=(experiment_override is None), choices=["3", "4", "5", "6", "7", "8"], help="Experiment index to evaluate")
@@ -168,6 +214,7 @@ def main(experiment_override=None):
     parser.add_argument("--prompt-mode", type=str, default="cot", choices=["cot", "direct"], help="Prompting mode")
     parser.add_argument("--data-dir", type=str, default="videos/custom_exp", help="Path to generated datasets")
     parser.add_argument("--output-dir", type=str, default="results/new_results", help="Output directory")
+    parser.add_argument("--vllm-url", type=str, default=None, help="If provided, routes requests to hosted vLLM endpoint")
     args = parser.parse_args()
     
     experiment_num = experiment_override if experiment_override is not None else args.experiment
@@ -194,8 +241,12 @@ def main(experiment_override=None):
         
     print(f"Loaded {len(exp_jsons)} metadata files for Experiment {experiment_num}")
     
-    # Load VLM model & processor
-    model, processor = load_model_and_processor(args.model_id, device=args.device)
+    # Load VLM model & processor or setup API routing
+    if args.vllm_url:
+        print(f"Using hosted vLLM endpoint: {args.vllm_url}")
+        model, processor = None, None
+    else:
+        model, processor = load_model_and_processor(args.model_id, device=args.device)
     
     results = []
     
@@ -219,8 +270,11 @@ def main(experiment_override=None):
             if experiment_num in ["3", "4", "8"]:
                 # Standard Video Counting
                 question_text = format_prompt_by_mode("How many times did the ball bounce?", args.prompt_mode)
-                inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0)
-                response = run_vlm_inference(model, processor, inputs)
+                if args.vllm_url:
+                    response = run_vllm_api_inference(video_path, question_text, args.vllm_url, args.model_id, fps=2.0)
+                else:
+                    inputs = prepare_video_inputs(video_path, question_text, processor, device=args.device, fps=2.0)
+                    response = run_vlm_inference(model, processor, inputs)
                 pred_count = extract_count_from_response(response)
                 
                 results.append({
@@ -247,9 +301,11 @@ def main(experiment_override=None):
                 
                 if save_success:
                     question_text = format_prompt_by_mode("How many times did the ball bounce?", args.prompt_mode)
-                    # Use fps=1.0 so processor samples exactly the 24 frames
-                    inputs = prepare_video_inputs(temp_video_path, question_text, processor, device=args.device, fps=1.0)
-                    response = run_vlm_inference(model, processor, inputs)
+                    if args.vllm_url:
+                        response = run_vllm_api_inference(temp_video_path, question_text, args.vllm_url, args.model_id, fps=1.0)
+                    else:
+                        inputs = prepare_video_inputs(temp_video_path, question_text, processor, device=args.device, fps=1.0)
+                        response = run_vlm_inference(model, processor, inputs)
                     pred_count = extract_count_from_response(response)
                     
                     results.append({
@@ -282,15 +338,17 @@ def main(experiment_override=None):
                 )
                 question_text = format_prompt_by_mode(prompt, args.prompt_mode)
                 
-                # Text-only input
-                messages = [
-                    {"role": "system", "content": "You are a precise counting assistant. Always wrap the final numeric count in \\boxed{}."},
-                    {"role": "user", "content": [{"type": "text", "text": question_text}]}
-                ]
-                text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-                inputs = processor(text=[text], padding=True, return_tensors="pt").to(args.device)
-                
-                response = run_vlm_inference(model, processor, inputs)
+                if args.vllm_url:
+                    response = run_vllm_api_inference(None, question_text, args.vllm_url, args.model_id, fps=None)
+                else:
+                    # Text-only input
+                    messages = [
+                        {"role": "system", "content": "You are a precise counting assistant. Always wrap the final numeric count in \\boxed{}."},
+                        {"role": "user", "content": [{"type": "text", "text": question_text}]}
+                    ]
+                    text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+                    inputs = processor(text=[text], padding=True, return_tensors="pt").to(args.device)
+                    response = run_vlm_inference(model, processor, inputs)
                 pred_count = extract_count_from_response(response)
                 
                 results.append({
@@ -317,18 +375,24 @@ def main(experiment_override=None):
                 # Let's ask: "List the events in their temporal order (e.g. bounce, bounce)."
                 prompt_seq = "List the chronological events occurring in the video. List them as a comma-separated list of 'Bounce' actions."
                 question_seq = format_prompt_by_mode(prompt_seq, args.prompt_mode)
-                inputs_seq = prepare_video_inputs(video_path, question_seq, processor, device=args.device, fps=2.0)
-                response_seq = run_vlm_inference(model, processor, inputs_seq)
-                
-                # Evaluate transition sequence correctness
-                # Count number of "bounce" occurrences in output
-                occurrences = len(re.findall(r'\bbounce\b', response_seq.lower()))
                 
                 # Verify order question
                 prompt_order = "Did the ball bounce more than once before 10.0 seconds? Respond with Yes or No."
                 question_order = format_prompt_by_mode(prompt_order, args.prompt_mode)
-                inputs_order = prepare_video_inputs(video_path, question_order, processor, device=args.device, fps=2.0)
-                response_order = run_vlm_inference(model, processor, inputs_order)
+                
+                if args.vllm_url:
+                    response_seq = run_vllm_api_inference(video_path, question_seq, args.vllm_url, args.model_id, fps=2.0)
+                    response_order = run_vllm_api_inference(video_path, question_order, args.vllm_url, args.model_id, fps=2.0)
+                else:
+                    inputs_seq = prepare_video_inputs(video_path, question_seq, processor, device=args.device, fps=2.0)
+                    response_seq = run_vlm_inference(model, processor, inputs_seq)
+                    
+                    inputs_order = prepare_video_inputs(video_path, question_order, processor, device=args.device, fps=2.0)
+                    response_order = run_vlm_inference(model, processor, inputs_order)
+                
+                # Evaluate transition sequence correctness
+                # Count number of "bounce" occurrences in output
+                occurrences = len(re.findall(r'\bbounce\b', response_seq.lower()))
                 
                 # Check ground truth for order question: count events before 10.0s
                 events_before_10 = sum(1 for t in bounce_times if t < 10.0)
