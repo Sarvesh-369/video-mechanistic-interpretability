@@ -169,11 +169,11 @@ def run_vllm_api_inference(video_path, question_text, vllm_url, model_id="Qwen/Q
     if video_path is not None:
         abs_video_path = os.path.abspath(video_path)
         video_item = {
-            "type": "video",
-            "video": f"file://{abs_video_path}"
+            "type": "video_url",
+            "video_url": {
+                "url": f"file://{abs_video_path}"
+            }
         }
-        if fps is not None:
-            video_item["fps"] = fps
         content.append(video_item)
         
     content.append({
