@@ -279,6 +279,59 @@ def plot_exp8_boundary(results_json, output_dir):
     plt.close()
     print(f"✓ Saved Exp 8 boundary estimation plot to {out_path}")
 
+def plot_exp9_irregularity(results_json, output_dir):
+    """
+    Generates bar chart comparing Periodic vs. Irregular timing accuracy across counts.
+    """
+    import os
+    if not os.path.exists(results_json):
+        print(f"Skipping Exp 9 plot: {results_json} not found.")
+        return
+        
+    with open(results_json, "r") as f:
+        data = json.load(f)
+        
+    # Group by count and regularity
+    grid = {}
+    for item in data:
+        N = item["count"]
+        reg = item["regularity"]
+        corr = 1.0 if item["correct"] else 0.0
+        grid.setdefault(N, {}).setdefault(reg, []).append(corr)
+        
+    counts = sorted(list(grid.keys()))
+    if not counts:
+        return
+        
+    periodic_acc = []
+    irregular_acc = []
+    
+    for N in counts:
+        periodic_acc.append(np.mean(grid[N].get("periodic", [0.0])))
+        irregular_acc.append(np.mean(grid[N].get("irregular", [0.0])))
+        
+    x = np.arange(len(counts))
+    width = 0.35
+    
+    fig, ax = plt.subplots(figsize=(8, 5))
+    rects1 = ax.bar(x - width/2, periodic_acc, width, label="Periodic (Regular)", color="#2ecc71", edgecolor="grey")
+    rects2 = ax.bar(x + width/2, irregular_acc, width, label="Aperiodic (Irregular)", color="#e74c3c", edgecolor="grey")
+    
+    ax.set_xlabel("Event Count (N)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Accuracy", fontsize=11, fontweight="bold")
+    ax.set_title("VLM Counting: Regular vs. Irregular Spacing", fontsize=13, fontweight="bold", pad=15)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"N={N}" for N in counts], fontweight="bold")
+    ax.set_ylim(-0.05, 1.05)
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend()
+    
+    plt.tight_layout()
+    out_path = Path(output_dir) / "exp9_regularity_irregularity.png"
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+    print(f"✓ Saved Exp 9 irregularity vs regularity plot to {out_path}")
+
 def main():
     parser = argparse.ArgumentParser(description="Compile and plot all new experiment results")
     parser.add_argument("--results-dir", type=str, default="results/new_results", help="Directory of evaluation JSON results")
@@ -308,6 +361,9 @@ def main():
     
     # 5. Plot Exp 8 Capacity Boundary
     plot_exp8_boundary(results_dir / "exp8_results.json", args.output_dir)
+    
+    # 6. Plot Exp 9 Timing Regularity
+    plot_exp9_irregularity(results_dir / "exp9_results.json", args.output_dir)
     
     print(f"\n✓ All compilation plots compiled and saved to {args.output_dir}/")
 

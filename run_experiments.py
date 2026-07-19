@@ -22,6 +22,7 @@ def main():
         print("  6 | exp6 : Symbolic Evidence Control")
         print("  7 | exp7 : Sequence Reconstruction Task")
         print("  8 | exp8 : Confidence-Based Capacity Boundary Estimation")
+        print("  9 | exp9 : Irregularity vs. Regularity Control")
         sys.exit(1)
         
     exp_key = sys.argv[1].lower()
@@ -44,11 +45,13 @@ def main():
         "exp7": "src.exp7_sequence_reconstruction",
         "8": "src.exp8_boundary_estimation",
         "exp8": "src.exp8_boundary_estimation",
+        "9": "src.exp9_irregularity",
+        "exp9": "src.exp9_irregularity",
     }
     
     if exp_key not in route_map:
         print(f"Error: Unknown experiment selection '{sys.argv[1]}'")
-        print("Choose from: 1, 2, 3, 4, 5, 6, 7, 8, exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8")
+        print("Choose from: 1, 2, 3, 4, 5, 6, 7, 8, 9, exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8, exp9")
         sys.exit(1)
         
     target_module = route_map[exp_key]

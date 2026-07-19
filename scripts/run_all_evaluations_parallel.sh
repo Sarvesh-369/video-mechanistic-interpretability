@@ -1,10 +1,10 @@
 #!/bin/bash
 
 echo "========================================================="
-echo "Starting Parallel VLM Evaluations (Exp 3 - Exp 8) on 2 GPUs"
+echo "Starting Parallel VLM Evaluations (Exp 3 - Exp 9) on 2 GPUs"
 echo "========================================================="
 
-# 1. GPU 0 Cohort (Exp 3, 4, 5) - targeting Port 8000
+# 1. GPU 0 Cohort (Exp 3, 4, 5, 9) - targeting Port 8000
 run_gpu0() {
     echo "[GPU 0 Cohort] Starting Exp 3 (Count x Span Sweep)..."
     python run_experiments.py exp3 --vllm-url http://localhost:8000/v1 "$@"
@@ -14,6 +14,9 @@ run_gpu0() {
     
     echo "[GPU 0 Cohort] Starting Exp 5 (Matched Oracle Control)..."
     python run_experiments.py exp5 --vllm-url http://localhost:8000/v1 "$@"
+    
+    echo "[GPU 0 Cohort] Starting Exp 9 (Timing Regularity Control)..."
+    python run_experiments.py exp9 --vllm-url http://localhost:8000/v1 "$@"
 }
 
 # 2. GPU 1 Cohort (Exp 6, 7, 8) - targeting Port 8001
