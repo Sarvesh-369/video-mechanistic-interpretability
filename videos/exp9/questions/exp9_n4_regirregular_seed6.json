@@ -1,0 +1,15 @@
+{
+  "experiment": "9",
+  "count": 4,
+  "span": 24.0,
+  "position": "early",
+  "regularity": "irregular",
+  "duration": 24.0,
+  "seed": 6,
+  "bounce_times": [
+    7.733333333333325,
+    12.599999999999975,
+    14.066666666666636,
+    24.13333333333327
+  ]
+}
