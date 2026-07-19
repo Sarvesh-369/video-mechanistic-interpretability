@@ -1,0 +1,21 @@
+# Core ML & Transformers
+torch
+torchvision
+transformers>=4.45.0
+accelerate
+qwen-vl-utils
+
+# Video Processing backends for Qwen VL
+decord
+av
+
+# Scientific Computing & Plotting
+numpy
+scikit-learn
+scipy
+matplotlib
+pandas
+
+# Utilities
+requests
+tqdm

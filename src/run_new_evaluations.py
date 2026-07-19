@@ -9,8 +9,6 @@ import torch
 
 from src.utils.model_helpers import load_model_and_processor, format_prompt_by_mode, prepare_video_inputs
 
-# Global Qwen VL helper imports
-from qwen_vl_utils import process_vision_info
 
 def extract_frames_from_video(video_path, timestamps, total_frames=24):
     """

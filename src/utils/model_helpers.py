@@ -2,7 +2,7 @@ import os
 import re
 import torch
 from transformers import AutoProcessor, AutoModelForImageTextToText
-from qwen_vl_utils import process_vision_info
+
 
 DEFAULT_MODEL_ID = "Qwen/Qwen3-VL-8B-Instruct"
 
@@ -131,6 +131,7 @@ def prepare_video_inputs(video_path, question_text, processor, device="cuda", fp
         text += "\\boxed{"
     
     # Process images and videos via qwen_vl_utils helper
+    from qwen_vl_utils import process_vision_info
     image_inputs, video_inputs = process_vision_info(messages)
     
     # Get tokenized inputs
