@@ -3,8 +3,14 @@ import os
 import json
 import re
 import torch
+import sys
 from pathlib import Path
+
+# Add project root to path to resolve src imports
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 from src.utils.model_helpers import load_model_and_processor, format_prompt_by_mode, prepare_video_inputs
+
 
 def extract_count_from_response(text):
     """

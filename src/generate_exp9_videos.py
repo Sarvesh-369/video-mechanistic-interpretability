@@ -3,8 +3,14 @@ import os
 import shutil
 import json
 import random
+import sys
 from pathlib import Path
+
+# Add project root to path to resolve src imports
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 from src.generate_custom_datasets import CustomBouncingBall
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate control videos for Experiment 9 (Timing Regularity)")
